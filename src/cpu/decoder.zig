@@ -1,10 +1,13 @@
+const std = @import("std");
 const is = @import("instruction_set.zig");
+
+const log = std.log.scoped(.decoder);
 
 fn getNBits(instr: u32, start: u5, n: u5, T: type) T {
     return @intCast((instr >> start) & ((@as(u32, 1) << n) - 1));
 }
 
-const InstrDecodeError = error{ InvalidInstruction, InvalidRegister };
+const InstrDecodeError = error{InvalidInstruction};
 
 fn decodeCondition(instr: u32) InstrDecodeError!is.Condition {
     const cond = getNBits(instr, 28, 4, u4);
@@ -83,9 +86,10 @@ fn decodeMultiplyInstr(instr: u32) InstrDecodeError!is.MultiplyInstr {
     const rs = getNBits(instr, 8, 4, u4);
     const rm = getNBits(instr, 0, 4, u4);
 
-    if (rd == rm) return InstrDecodeError.InvalidRegister;
+    if (rd == rm)
+        log.warn("Invalid registers: Rd and Rm must be different", .{});
     if (rd == 15 or rn == 15 or rs == 15 or rm == 15)
-        return InstrDecodeError.InvalidRegister;
+        log.warn("Invalid registers: R15 can't be used", .{});
 
     return .{
         .acc_flag = getNBits(instr, 21, 1, u1) == 1,
@@ -106,9 +110,10 @@ fn decodeMultiplyLongInstr(instr: u32) InstrDecodeError!is.MultiplyLongInstr {
     const rs = getNBits(instr, 8, 4, u4);
     const rm = getNBits(instr, 0, 4, u4);
 
-    if (rd_high == rd_low or rd_high == rm or rd_low == rm) return InstrDecodeError.InvalidRegister;
+    if (rd_high == rd_low or rd_high == rm or rd_low == rm)
+        log.warn("Invalid registers: RdHi, RdLo, Rm must be different", .{});
     if (rd_high == 15 or rd_low == 15 or rs == 15 or rm == 15)
-        return InstrDecodeError.InvalidRegister;
+        log.warn("Invalid registers: R15 can't be used", .{});
 
     return .{
         .signed = getNBits(instr, 22, 1, u1) == 1,
