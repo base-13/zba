@@ -182,10 +182,21 @@ pub const MultiplyInstr = struct {
     rm: u4,
 };
 
+pub const MultiplyLongInstr = struct {
+    signed: bool,
+    acc_flag: bool,
+    set_cond_flag: bool,
+    rd_high: u4,
+    rd_low: u4,
+    rs: u4,
+    rm: u4,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
     multiply: MultiplyInstr,
+    multiply_long: MultiplyLongInstr,
 };
 
 pub const Instr = struct {

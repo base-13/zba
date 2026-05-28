@@ -349,3 +349,30 @@ pub fn execMultiply(instr: is.MultiplyInstr, registers: *is.Reigsters) void {
         registers.cpsr.neg_flag = result >> 31 == 1;
     }
 }
+
+pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *is.Reigsters) void {
+    const rs_content = registers.get(instr.rs);
+    const rm_content = registers.get(instr.rm);
+    const rd_high_content: u64 = @intCast(registers.get(instr.rd_high));
+    const rd_low_content: u64 = @intCast(registers.get(instr.rd_low));
+
+    var result: u64 = undefined;
+
+    if (instr.signed) {
+        const rs_content_signed: i32 = @bitCast(rs_content);
+        const rm_content_signed: i32 = @bitCast(rm_content);
+
+        result = @bitCast(@as(i64, rs_content_signed) * @as(i64, rm_content_signed));
+    } else result = @as(u64, rs_content) * @as(u64, rm_content);
+
+    if (instr.acc_flag)
+        result +%= (rd_high_content << 32) | rd_low_content;
+
+    registers.set(instr.rd_high, @truncate(result >> 32));
+    registers.set(instr.rd_low, @truncate(result & 0xFFFF_FFFF));
+
+    if (instr.set_cond_flag) {
+        registers.cpsr.zero_flag = result == 0;
+        registers.cpsr.neg_flag = result >> 63 == 1;
+    }
+}

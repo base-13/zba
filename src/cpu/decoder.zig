@@ -97,12 +97,39 @@ fn decodeMultiplyInstr(instr: u32) InstrDecodeError!is.MultiplyInstr {
     };
 }
 
+fn decodeMultiplyLongInstr(instr: u32) InstrDecodeError!is.MultiplyLongInstr {
+    if (getNBits(instr, 23, 5, u5) != 1) return InstrDecodeError.InvalidInstruction;
+    if (getNBits(instr, 4, 4, u4) != 0b1001) return InstrDecodeError.InvalidInstruction;
+
+    const rd_high = getNBits(instr, 16, 4, u4);
+    const rd_low = getNBits(instr, 12, 4, u4);
+    const rs = getNBits(instr, 8, 4, u4);
+    const rm = getNBits(instr, 0, 4, u4);
+
+    if (rd_high == rd_low or rd_high == rm or rd_low == rm) return InstrDecodeError.InvalidRegister;
+    if (rd_high == 15 or rd_low == 15 or rs == 15 or rm == 15)
+        return InstrDecodeError.InvalidRegister;
+
+    return .{
+        .signed = getNBits(instr, 22, 1, u1) == 1,
+        .acc_flag = getNBits(instr, 21, 1, u1) == 1,
+        .set_cond_flag = getNBits(instr, 20, 1, u1) == 1,
+        .rd_high = rd_high,
+        .rd_low = rd_low,
+        .rs = rs,
+        .rm = rm,
+    };
+}
+
 pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const cond = try decodeCondition(instr);
     var fields: is.Fields = undefined;
 
     const multiply_bitmask = 0b0000_111111_00000000000000_1111_0000;
     const multiply_test = 0b0000_000000_00000000000000_1001_0000;
+
+    const multiply_long_bitmask = 0b0000_11111_000000000000000_1111_0000;
+    const multiply_long_test = 0b0000_00001_000000000000000_1001_0000;
 
     const data_proc_bitmask = 0b0000_11_00000000000000000000000000;
     const data_proc_test = 0b0000_00_00000000000000000000000000;
@@ -112,6 +139,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
 
     if (instr & multiply_bitmask == multiply_test)
         fields = .{ .multiply = try decodeMultiplyInstr(instr) }
+    else if (instr & multiply_long_bitmask == multiply_long_test)
+        fields = .{ .multiply_long = try decodeMultiplyLongInstr(instr) }
     else if (instr & data_proc_bitmask == data_proc_test)
         fields = .{ .data_proc = try decodeDataProcInstr(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)

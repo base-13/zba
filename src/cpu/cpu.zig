@@ -31,6 +31,7 @@ pub fn poll() !bool {
         .data_proc => std.debug.print("{} {}\n", .{ instr, instr.fields.data_proc.op2 }),
         .branch_with_link => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.branch_with_link }),
         .multiply => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply }),
+        .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
     }
 
     if (exec.checkCondition(instr, &registers))
@@ -38,6 +39,7 @@ pub fn poll() !bool {
             .data_proc => |i| exec.execDataProc(i, &registers),
             .branch_with_link => |i| exec.execBranchWithLink(i, &registers),
             .multiply => |i| exec.execMultiply(i, &registers),
+            .multiply_long => |i| exec.execMultiplyLong(i, &registers),
         };
 
     // PC may have been updated by instruction so we use the latest value
