@@ -1,4 +1,16 @@
+const std = @import("std");
+
 pub const Reigsters = struct {
+    pub const CPUMode = enum(u5) {
+        User = 0x10,
+        FIQ = 0x11,
+        IRQ = 0x12,
+        Supervisor = 0x13,
+        Abort = 0x17,
+        Undefined = 0x1B,
+        System = 0x1F,
+    };
+
     pub const ProgramStatusReg = struct {
         neg_flag: bool = false,
         zero_flag: bool = false,
@@ -7,15 +19,7 @@ pub const Reigsters = struct {
         irq_disable: bool = true,
         fiq_disable: bool = true,
         thumb_state: bool = false,
-        mode: enum(u5) {
-            User = 0x10,
-            FIQ = 0x11,
-            IRQ = 0x12,
-            Supervisor = 0x13,
-            Abort = 0x17,
-            Undefined = 0x1B,
-            System = 0x1F,
-        } = .Supervisor,
+        mode: CPUMode = .Supervisor,
     };
 
     pc: u32 = 0,
@@ -48,6 +52,114 @@ pub const Reigsters = struct {
         r13_14: [2]u32 = @splat(0),
         spsr: ProgramStatusReg = .{},
     } = .{},
+
+    pub fn setPSRFromBin(
+        self: *Reigsters,
+        value: u32,
+        cpsr: bool,
+        set_control_fields: bool,
+        set_cond_fields: bool,
+    ) void {
+        const current_mode = self.cpsr.mode;
+
+        var n = self.cpsr.neg_flag;
+        var z = self.cpsr.zero_flag;
+        var c = self.cpsr.carry_flag;
+        var v = self.cpsr.overflow_flag;
+
+        if (set_cond_fields) {
+            n = (value >> 31) & 1 == 1;
+            z = (value >> 30) & 1 == 1;
+            c = (value >> 29) & 1 == 1;
+            v = (value >> 28) & 1 == 1;
+        }
+
+        var i = self.cpsr.irq_disable;
+        var f = self.cpsr.fiq_disable;
+        var t = self.cpsr.thumb_state;
+        var new_mode = self.cpsr.mode;
+
+        if (current_mode != .User and current_mode != .System and set_control_fields) {
+            i = (value >> 7) & 1 == 1;
+            f = (value >> 6) & 1 == 1;
+            t = (value >> 5) & 1 == 1;
+            new_mode = std.enums.fromInt(CPUMode, value & 0b11111) orelse self.cpsr.mode;
+        }
+
+        const psr: ProgramStatusReg = .{
+            .neg_flag = n,
+            .zero_flag = z,
+            .carry_flag = c,
+            .overflow_flag = v,
+            .irq_disable = i,
+            .fiq_disable = f,
+            .thumb_state = t,
+            .mode = new_mode,
+        };
+
+        if (cpsr)
+            self.cpsr = psr
+        else switch (current_mode) {
+            .FIQ => self.fiq.spsr = psr,
+            .IRQ => self.fiq.spsr = psr,
+            .Supervisor => self.fiq.spsr = psr,
+            .Abort => self.fiq.spsr = psr,
+            .Undefined => self.fiq.spsr = psr,
+            .User, .System => unreachable,
+        }
+    }
+
+    pub fn getBinFromPSR(self: *Reigsters, cpsr: bool) u32 {
+        var n: bool = undefined;
+        var z: bool = undefined;
+        var c: bool = undefined;
+        var v: bool = undefined;
+        var i: bool = undefined;
+        var f: bool = undefined;
+        var t: bool = undefined;
+        var mode: CPUMode = undefined;
+
+        if (cpsr) {
+            n = self.cpsr.neg_flag;
+            z = self.cpsr.zero_flag;
+            c = self.cpsr.carry_flag;
+            v = self.cpsr.overflow_flag;
+            i = self.cpsr.irq_disable;
+            f = self.cpsr.fiq_disable;
+            t = self.cpsr.thumb_state;
+            mode = self.cpsr.mode;
+        } else {
+            var spsr: ProgramStatusReg = undefined;
+            switch (self.cpsr.mode) {
+                .FIQ => spsr = self.fiq.spsr,
+                .IRQ => spsr = self.fiq.spsr,
+                .Supervisor => spsr = self.fiq.spsr,
+                .Abort => spsr = self.fiq.spsr,
+                .Undefined => spsr = self.fiq.spsr,
+                .User, .System => unreachable,
+            }
+
+            n = spsr.neg_flag;
+            z = spsr.zero_flag;
+            c = spsr.carry_flag;
+            v = spsr.overflow_flag;
+            i = spsr.irq_disable;
+            f = spsr.fiq_disable;
+            t = spsr.thumb_state;
+            mode = spsr.mode;
+        }
+
+        const n_bit: u32 = @as(u32, @intFromBool(n)) << 31;
+        const z_bit: u32 = @as(u32, @intFromBool(z)) << 30;
+        const c_bit: u32 = @as(u32, @intFromBool(c)) << 29;
+        const v_bit: u32 = @as(u32, @intFromBool(v)) << 28;
+        const i_bit: u32 = @as(u32, @intFromBool(i)) << 7;
+        const f_bit: u32 = @as(u32, @intFromBool(f)) << 6;
+        const t_bit: u32 = @as(u32, @intFromBool(t)) << 5;
+        const mode_bits: u32 = @intFromEnum(mode);
+
+        return n_bit | z_bit | c_bit | v_bit | i_bit | f_bit | t_bit | mode_bits;
+    }
 
     pub fn getPC(self: *Reigsters) u32 {
         return self.pc;
@@ -115,7 +227,7 @@ pub const Condition = enum(u4) {
     AL = 0b1110,
 };
 
-pub const DataProcInstrOps = struct {
+pub const DataProcPSRTInstrOps = struct {
     pub const Opcode = enum(u4) {
         AND = 0b0000,
         EOR = 0b0001,
@@ -161,11 +273,11 @@ pub const DataProcInstrOps = struct {
 
 pub const DataProcInstr = struct {
     imm_flag: bool,
-    opcode: DataProcInstrOps.Opcode,
+    opcode: DataProcPSRTInstrOps.Opcode,
     set_cond_flag: bool,
     rn: u4,
     rd: u4,
-    op2: DataProcInstrOps.Operand2,
+    op2: DataProcPSRTInstrOps.Operand2,
 };
 
 pub const BranchWithLink = struct {
@@ -192,11 +304,27 @@ pub const MultiplyLongInstr = struct {
     rm: u4,
 };
 
+pub const PSRTransferInstr = struct {
+    cpsr: bool,
+    update_control_fields: bool = false,
+    update_cond_fields: bool = false,
+    type: union(enum) {
+        mrs: struct { rd: u4 },
+        msr: struct {
+            imm_flag: bool,
+            rm: ?u4 = null,
+            rotate: ?u4 = null,
+            imm: ?u8 = null,
+        },
+    },
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
     multiply: MultiplyInstr,
     multiply_long: MultiplyLongInstr,
+    psr_transfer: PSRTransferInstr,
 };
 
 pub const Instr = struct {

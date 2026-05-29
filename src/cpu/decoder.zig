@@ -22,7 +22,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
 
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
 
-    var op2: is.DataProcInstrOps.Operand2 = undefined;
+    var op2: is.DataProcPSRTInstrOps.Operand2 = undefined;
 
     if (imm_flag) {
         op2 = .{
@@ -32,7 +32,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
             },
         };
     } else {
-        var shift: is.DataProcInstrOps.Operand2RegShift = undefined;
+        var shift: is.DataProcPSRTInstrOps.Operand2RegShift = undefined;
 
         if (getNBits(instr, 4, 1, u1) == 1) {
             if (getNBits(instr, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
@@ -51,7 +51,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
         };
     }
 
-    const opcode: is.DataProcInstrOps.Opcode = @enumFromInt(getNBits(instr, 21, 4, u4));
+    const opcode: is.DataProcPSRTInstrOps.Opcode = @enumFromInt(getNBits(instr, 21, 4, u4));
     const set_cond_flag = switch (opcode) {
         .TEQ, .TST, .CMP, .CMN => true,
         else => getNBits(instr, 20, 1, u1) == 1,
@@ -126,6 +126,82 @@ fn decodeMultiplyLongInstr(instr: u32) InstrDecodeError!is.MultiplyLongInstr {
     };
 }
 
+fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
+    const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
+    const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
+
+    const msr_reg_bitmask = 0b0000_11111_0_11_0000_111111111111_0000;
+    const msr_reg_test = 0b0000_00010_0_10_0000_111100000000_0000;
+
+    const msr_imm_bitmask = 0b0000_11111_0_11_0000_1111_00000000_0000;
+    const msr_imm_test = 0b0000_00110_0_10_0000_1111_00000000_0000;
+
+    if ((instr & mrs_bitmask != mrs_test) and
+        (instr & msr_reg_bitmask != msr_reg_test) and
+        (instr & msr_imm_bitmask != msr_imm_test))
+        return InstrDecodeError.InvalidInstruction;
+
+    const cpsr = getNBits(instr, 22, 1, u1) == 0;
+
+    if (instr & mrs_bitmask == mrs_test) {
+        const rd = getNBits(instr, 12, 4, u4);
+        if (rd == 15) log.warn("Invalid registers: R15 can't be used", .{});
+
+        return .{
+            .cpsr = cpsr,
+            .type = .{ .mrs = .{ .rd = rd } },
+        };
+    } else {
+        const imm_flag = getNBits(instr, 25, 1, u1) == 1;
+
+        const update_cond_fields = getNBits(instr, 19, 1, u1) == 1;
+        const update_ext_fields = getNBits(instr, 18, 1, u1) == 1;
+        const update_status_fields = getNBits(instr, 17, 1, u1) == 1;
+        const update_control_fields = getNBits(instr, 16, 1, u1) == 1;
+
+        if (update_ext_fields)
+            log.warn("PSR_x bits are reserved, they will not be updated", .{});
+        if (update_status_fields)
+            log.warn("PSR_s bits are reserved, they will not be updated", .{});
+
+        if (imm_flag)
+            return .{
+                .cpsr = cpsr,
+                .update_control_fields = update_control_fields,
+                .update_cond_fields = update_cond_fields,
+                .type = .{ .msr = .{
+                    .imm_flag = imm_flag,
+                    .rotate = getNBits(instr, 8, 4, u4),
+                    .imm = getNBits(instr, 0, 8, u8),
+                } },
+            }
+        else {
+            const rm = getNBits(instr, 0, 4, u4);
+            if (rm == 15) log.warn("Invalid registers: R15 can't be used", .{});
+
+            return .{
+                .cpsr = cpsr,
+                .update_control_fields = update_control_fields,
+                .update_cond_fields = update_cond_fields,
+                .type = .{ .msr = .{
+                    .imm_flag = imm_flag,
+                    .rm = rm,
+                } },
+            };
+        }
+    }
+}
+
+fn checkPSRTransferInstr(instr: u32) bool {
+    const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
+    const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
+
+    const msr_bitmask = 0b0000_11_0_11_0_11_0000_1111_00000000_0000;
+    const msr_test = 0b0000_00_0_10_0_10_0000_1111_00000000_0000;
+
+    return (instr & mrs_bitmask == mrs_test) or (instr & msr_bitmask == msr_test);
+}
+
 pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const cond = try decodeCondition(instr);
     var fields: is.Fields = undefined;
@@ -146,6 +222,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
         fields = .{ .multiply = try decodeMultiplyInstr(instr) }
     else if (instr & multiply_long_bitmask == multiply_long_test)
         fields = .{ .multiply_long = try decodeMultiplyLongInstr(instr) }
+    else if (checkPSRTransferInstr(instr))
+        fields = .{ .psr_transfer = try decodePSRTransferInstr(instr) }
     else if (instr & data_proc_bitmask == data_proc_test)
         fields = .{ .data_proc = try decodeDataProcInstr(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)

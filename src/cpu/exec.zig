@@ -1,4 +1,7 @@
+const std = @import("std");
 const is = @import("instruction_set.zig");
+
+const log = std.log.scoped(.exec);
 
 fn rotateRight(x: u32, n: u32) u32 {
     const shift: u5 = @intCast(n);
@@ -374,5 +377,55 @@ pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *is.Reigsters) v
     if (instr.set_cond_flag) {
         registers.cpsr.zero_flag = result == 0;
         registers.cpsr.neg_flag = result >> 63 == 1;
+    }
+}
+
+pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *is.Reigsters) void {
+    if (!instr.cpsr)
+        switch (registers.cpsr.mode) {
+            .User, .System => |mode| {
+                log.err("SPSR was attempted to be accessed in {} mode, NOP will be performed", .{mode});
+                return;
+            },
+            else => {},
+        };
+
+    switch (instr.type) {
+        .mrs => |mrs| {
+            const psr = registers.getBinFromPSR(instr.cpsr);
+
+            registers.set(mrs.rd, psr);
+        },
+        .msr => |msr| {
+            var op: u32 = undefined;
+
+            if (msr.imm_flag) {
+                const rotate = msr.rotate.?;
+                const imm = msr.imm.?;
+
+                op = rotateRight(imm, rotate * 2);
+            } else {
+                op = registers.get(msr.rm.?);
+            }
+
+            if (op >> 5 & 1 == 1)
+                log.warn("Attempt to set T bit via MSR will result in undefined behaviour", .{});
+
+            if (instr.cpsr) {
+                registers.setPSRFromBin(
+                    op,
+                    true,
+                    instr.update_control_fields,
+                    instr.update_cond_fields,
+                );
+            } else {
+                registers.setPSRFromBin(
+                    op,
+                    false,
+                    instr.update_control_fields,
+                    instr.update_cond_fields,
+                );
+            }
+        },
     }
 }

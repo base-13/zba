@@ -32,6 +32,7 @@ pub fn poll() !bool {
         .branch_with_link => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.branch_with_link }),
         .multiply => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply }),
         .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
+        .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
     }
 
     if (exec.checkCondition(instr, &registers))
@@ -40,6 +41,7 @@ pub fn poll() !bool {
             .branch_with_link => |i| exec.execBranchWithLink(i, &registers),
             .multiply => |i| exec.execMultiply(i, &registers),
             .multiply_long => |i| exec.execMultiplyLong(i, &registers),
+            .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
         };
 
     // PC may have been updated by instruction so we use the latest value
