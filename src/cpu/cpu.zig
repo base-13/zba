@@ -21,7 +21,17 @@ pub fn poll() !bool {
     const pc = registers.getPC();
 
     if (pc >= rom.len) {
-        std.debug.print("\n\n{} {any}\n{}\n\n", .{ registers.getPC(), registers.r, registers.cpsr });
+        const debug_fmt = "\n\nPC: {} GPRs: {any}\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
+        std.debug.print(debug_fmt, .{
+            registers.getPC(),
+            registers.r,
+            registers.cpsr,
+            registers.fiq,
+            registers.irq,
+            registers.abt,
+            registers.svc,
+            registers.und,
+        });
         return false;
     }
 
