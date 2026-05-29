@@ -1,7 +1,7 @@
 const std = @import("std");
-const is = @import("instruction_set.zig");
-const decoder = @import("decoder.zig");
-const exec = @import("exec.zig");
+const is = @import("arm/instruction_set.zig");
+const decoder = @import("arm/decoder.zig");
+const exec = @import("arm/exec.zig");
 
 var registers = is.Reigsters{};
 
