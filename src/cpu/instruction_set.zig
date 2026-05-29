@@ -86,6 +86,38 @@ pub const Reigsters = struct {
             new_mode = std.enums.fromInt(CPUMode, value & 0b11111) orelse self.cpsr.mode;
         }
 
+        if (new_mode != self.cpsr.mode) {
+            switch (new_mode) {
+                .User, .System => {},
+                .FIQ => {
+                    for (8..15) |r|
+                        self.fiq.r8_14[r - 8] = self.get(r);
+
+                    self.fiq.spsr = cpsr;
+                },
+                .SVC => {
+                    self.svc.r13_14 = .{ self.get(13), self.get(14) };
+
+                    self.svc.spsr = cpsr;
+                },
+                .Abort => {
+                    self.irq.r13_14 = .{ self.get(13), self.get(14) };
+
+                    self.irq.spsr = cpsr;
+                },
+                .Abort => {
+                    self.abt.r13_14 = .{ self.get(13), self.get(14) };
+
+                    self.abt.spsr = cpsr;
+                },
+                .Undefined => {
+                    self.und.r13_14 = .{ self.get(13), self.get(14) };
+
+                    self.und.spsr = cpsr;
+                },
+            }
+        }
+
         const psr: ProgramStatusReg = .{
             .neg_flag = n,
             .zero_flag = z,
