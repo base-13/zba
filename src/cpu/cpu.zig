@@ -1,9 +1,10 @@
 const std = @import("std");
 const is = @import("arm/instruction_set.zig");
+const cpu_state = @import("cpu_state.zig");
 const decoder = @import("arm/decoder.zig");
 const exec = @import("arm/exec.zig");
 
-var registers = is.Reigsters{};
+var registers = cpu_state.Reigsters{};
 
 fn getInstr(pc: u32) !is.Instr {
     const instr = std.mem.readInt(u32, rom[pc .. pc + 4][0..4], .little);

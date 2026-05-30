@@ -1,5 +1,6 @@
 const std = @import("std");
 const is = @import("instruction_set.zig");
+const cpu_state = @import("../cpu_state.zig");
 
 const log = std.log.scoped(.exec);
 
@@ -11,7 +12,7 @@ fn rotateRight(x: u32, n: u32) u32 {
     return (x >> shift) | (x << inv);
 }
 
-pub fn checkCondition(instr: is.Instr, registers: *is.Reigsters) bool {
+pub fn checkCondition(instr: is.Instr, registers: *cpu_state.Reigsters) bool {
     const zero = registers.cpsr.zero_flag;
     const carry = registers.cpsr.carry_flag;
     const neg = registers.cpsr.neg_flag;
@@ -36,7 +37,7 @@ pub fn checkCondition(instr: is.Instr, registers: *is.Reigsters) bool {
     };
 }
 
-pub fn execDataProc(instr: is.DataProcInstr, registers: *is.Reigsters) void {
+pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) void {
     var cpsr = &registers.cpsr;
 
     const rd = instr.rd;
@@ -326,7 +327,7 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *is.Reigsters) void {
     }
 }
 
-pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *is.Reigsters) void {
+pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *cpu_state.Reigsters) void {
     const current_pc = registers.get(15);
 
     const bit_mask: u32 = ~@as(u32, 0b11);
@@ -337,7 +338,7 @@ pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *is.Reigsters) vo
     registers.setPC(@bitCast(new_pc));
 }
 
-pub fn execMultiply(instr: is.MultiplyInstr, registers: *is.Reigsters) void {
+pub fn execMultiply(instr: is.MultiplyInstr, registers: *cpu_state.Reigsters) void {
     const rs_content = registers.get(instr.rs);
     const rm_content = registers.get(instr.rm);
     const rn_content = registers.get(instr.rn);
@@ -353,7 +354,7 @@ pub fn execMultiply(instr: is.MultiplyInstr, registers: *is.Reigsters) void {
     }
 }
 
-pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *is.Reigsters) void {
+pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *cpu_state.Reigsters) void {
     const rs_content = registers.get(instr.rs);
     const rm_content = registers.get(instr.rm);
     const rd_high_content: u64 = @intCast(registers.get(instr.rd_high));
@@ -380,7 +381,7 @@ pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *is.Reigsters) v
     }
 }
 
-pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *is.Reigsters) void {
+pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigsters) void {
     if (!instr.cpsr)
         switch (registers.cpsr.mode) {
             .User, .System => |mode| {
