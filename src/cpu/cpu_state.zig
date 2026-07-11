@@ -135,10 +135,10 @@ pub const Reigsters = struct {
             self.cpsr = psr
         else switch (current_mode) {
             .FIQ => self.fiq.spsr = psr,
-            .IRQ => self.fiq.spsr = psr,
-            .Supervisor => self.fiq.spsr = psr,
-            .Abort => self.fiq.spsr = psr,
-            .Undefined => self.fiq.spsr = psr,
+            .IRQ => self.irq.spsr = psr,
+            .Supervisor => self.svc.spsr = psr,
+            .Abort => self.abt.spsr = psr,
+            .Undefined => self.und.spsr = psr,
             .User, .System => unreachable,
         }
     }
@@ -166,10 +166,10 @@ pub const Reigsters = struct {
             var spsr: ProgramStatusReg = undefined;
             switch (self.cpsr.mode) {
                 .FIQ => spsr = self.fiq.spsr,
-                .IRQ => spsr = self.fiq.spsr,
-                .Supervisor => spsr = self.fiq.spsr,
-                .Abort => spsr = self.fiq.spsr,
-                .Undefined => spsr = self.fiq.spsr,
+                .IRQ => spsr = self.irq.spsr,
+                .Supervisor => spsr = self.svc.spsr,
+                .Abort => spsr = self.abt.spsr,
+                .Undefined => spsr = self.und.spsr,
                 .User, .System => unreachable,
             }
 
