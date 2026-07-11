@@ -430,3 +430,11 @@ pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigste
         },
     }
 }
+
+pub fn execSoftwareInterrupt(registers: *cpu_state.Reigsters) void {
+    registers.svc.spsr = registers.cpsr;
+    registers.cpsr.mode = .Supervisor;
+    registers.cpsr.irq_disable = true;
+    registers.set(14, registers.pc + 0x4);
+    registers.setPC(0x8);
+}

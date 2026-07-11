@@ -93,6 +93,8 @@ pub const MultiplyLongInstr = struct {
     rm: u4,
 };
 
+pub const SoftwareInterruptInstr = struct { comment: u24 };
+
 pub const PSRTransferInstr = struct {
     cpsr: bool,
     update_control_fields: bool = false,
@@ -114,6 +116,7 @@ pub const Fields = union(enum) {
     multiply: MultiplyInstr,
     multiply_long: MultiplyLongInstr,
     psr_transfer: PSRTransferInstr,
+    software_interrupt: SoftwareInterruptInstr,
 };
 
 pub const Instr = struct {

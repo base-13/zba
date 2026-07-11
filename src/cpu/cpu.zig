@@ -53,6 +53,7 @@ pub fn poll() !bool {
             .multiply => |i| exec.execMultiply(i, &registers),
             .multiply_long => |i| exec.execMultiplyLong(i, &registers),
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
+            .software_interrupt => exec.execSoftwareInterrupt(&registers),
         };
 
     // PC may have been updated by instruction so we use the latest value
