@@ -44,7 +44,7 @@ pub fn poll() !bool {
         .multiply => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply }),
         .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
         .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
-        .software_interrupt => std.debug.print("Software Interrupt Instruction\n"),
+        .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
     }
 
     if (exec.checkCondition(instr, &registers))
