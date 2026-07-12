@@ -192,13 +192,6 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
     }
 }
 
-fn decodeSoftwareInterruptInstr(instr: u32) InstrDecodeError!is.SoftwareInterruptInstr {
-    if (getNBits(instr, 24, 4, u4) != 0b1111)
-        return InstrDecodeError.InvalidInstruction;
-
-    return .{ .comment = getNBits(instr, 0, 24, u24) };
-}
-
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -229,7 +222,7 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const software_interrupt_test = 0b0000_1111_000000000000000000000000;
 
     if (instr & software_interrupt_bitmask == software_interrupt_test)
-        fields = .{ .software_interrupt = try decodeSoftwareInterruptInstr(instr) }
+        fields = .{ .software_interrupt = .{} }
     else if (instr & multiply_bitmask == multiply_test)
         fields = .{ .multiply = try decodeMultiplyInstr(instr) }
     else if (instr & multiply_long_bitmask == multiply_long_test)

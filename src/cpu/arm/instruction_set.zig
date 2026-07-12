@@ -93,7 +93,7 @@ pub const MultiplyLongInstr = struct {
     rm: u4,
 };
 
-pub const SoftwareInterruptInstr = struct { comment: u24 };
+pub const SoftwareInterruptInstr = struct {};
 
 pub const PSRTransferInstr = struct {
     cpsr: bool,
