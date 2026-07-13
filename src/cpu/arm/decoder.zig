@@ -22,7 +22,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
 
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
 
-    var op2: is.DataProcPSRTInstrOps.Operand2 = undefined;
+    var op2: is.OffsetOperand.Operand = undefined;
 
     if (imm_flag) {
         op2 = .{
@@ -32,7 +32,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
             },
         };
     } else {
-        var shift: is.DataProcPSRTInstrOps.Operand2RegShift = undefined;
+        var shift: is.OffsetOperand.RegOffsetShift = undefined;
 
         if (getNBits(instr, 4, 1, u1) == 1) {
             if (getNBits(instr, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
@@ -51,7 +51,7 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
         };
     }
 
-    const opcode: is.DataProcPSRTInstrOps.Opcode = @enumFromInt(getNBits(instr, 21, 4, u4));
+    const opcode: is.DataProcInstrOpcode = @enumFromInt(getNBits(instr, 21, 4, u4));
     const set_cond_flag = switch (opcode) {
         .TEQ, .TST, .CMP, .CMN => true,
         else => getNBits(instr, 20, 1, u1) == 1,

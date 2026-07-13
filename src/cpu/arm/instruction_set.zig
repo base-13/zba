@@ -16,28 +16,22 @@ pub const Condition = enum(u4) {
     AL = 0b1110,
 };
 
-pub const DataProcPSRTInstrOps = struct {
-    pub const Opcode = enum(u4) {
-        AND = 0b0000,
-        EOR = 0b0001,
-        SUB = 0b0010,
-        RSB = 0b0011,
-        ADD = 0b0100,
-        ADC = 0b0101,
-        SBC = 0b0110,
-        RSC = 0b0111,
-        TST = 0b1000,
-        TEQ = 0b1001,
-        CMP = 0b1010,
-        CMN = 0b1011,
-        ORR = 0b1100,
-        MOV = 0b1101,
-        BIC = 0b1110,
-        MVN = 0b1111,
+pub const OffsetOperand = struct {
+    pub const ShiftType = enum(u2) {
+        LogicalLeft = 0b00,
+        LogicalRight = 0b01,
+        ArithmeticRight = 0b10,
+        RotateRight = 0b11,
     };
-    pub const Operand2 = union(enum) {
+
+    pub const RegOffsetShift = union(enum) {
+        shift_amount: u5,
+        rs: u4,
+    };
+
+    pub const Operand = union(enum) {
         reg_operand: struct {
-            shift: Operand2RegShift,
+            shift: RegOffsetShift,
             shift_type: ShiftType,
             rm: u4,
         },
@@ -46,27 +40,34 @@ pub const DataProcPSRTInstrOps = struct {
             imm: u8,
         },
     };
+};
 
-    pub const ShiftType = enum(u2) {
-        LogicalLeft = 0b00,
-        LogicalRight = 0b01,
-        ArithmeticRight = 0b10,
-        RotateRight = 0b11,
-    };
-
-    pub const Operand2RegShift = union(enum) {
-        shift_amount: u5,
-        rs: u4,
-    };
+pub const DataProcInstrOpcode = enum(u4) {
+    AND = 0b0000,
+    EOR = 0b0001,
+    SUB = 0b0010,
+    RSB = 0b0011,
+    ADD = 0b0100,
+    ADC = 0b0101,
+    SBC = 0b0110,
+    RSC = 0b0111,
+    TST = 0b1000,
+    TEQ = 0b1001,
+    CMP = 0b1010,
+    CMN = 0b1011,
+    ORR = 0b1100,
+    MOV = 0b1101,
+    BIC = 0b1110,
+    MVN = 0b1111,
 };
 
 pub const DataProcInstr = struct {
     imm_flag: bool,
-    opcode: DataProcPSRTInstrOps.Opcode,
+    opcode: DataProcInstrOpcode,
     set_cond_flag: bool,
     rn: u4,
     rd: u4,
-    op2: DataProcPSRTInstrOps.Operand2,
+    op2: OffsetOperand.Operand,
 };
 
 pub const BranchWithLink = struct {

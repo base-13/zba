@@ -412,21 +412,12 @@ pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigste
             if (op >> 5 & 1 == 1)
                 log.warn("Attempt to set T bit via MSR will result in undefined behaviour", .{});
 
-            if (instr.cpsr) {
-                registers.setPSRFromBin(
-                    op,
-                    true,
-                    instr.update_control_fields,
-                    instr.update_cond_fields,
-                );
-            } else {
-                registers.setPSRFromBin(
-                    op,
-                    false,
-                    instr.update_control_fields,
-                    instr.update_cond_fields,
-                );
-            }
+            registers.setPSRFromBin(
+                op,
+                instr.cpsr,
+                instr.update_control_fields,
+                instr.update_cond_fields,
+            );
         },
     }
 }
