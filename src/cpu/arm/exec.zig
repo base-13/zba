@@ -37,31 +37,23 @@ pub fn checkCondition(instr: is.Instr, registers: *cpu_state.Reigsters) bool {
     };
 }
 
-pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) void {
-    var cpsr = &registers.cpsr;
-
-    const rd = instr.rd;
-    const rn_content = registers.get(instr.rn);
-    var op2: u32 = undefined;
+fn calcOffset(imm_flag: bool, offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Reigsters) struct { u32, ?bool } {
+    const cpsr = &registers.cpsr;
+    var offset: u32 = undefined;
     var shifter_carry: ?bool = null;
-    var alu_carry: ?bool = null;
-    var zero: ?bool = null;
-    var overflow: ?bool = null;
-    var negative: ?bool = null;
 
-    if (instr.imm_flag) {
-        const imm = instr.op2.imm_operand.imm;
-        const rotate = instr.op2.imm_operand.rotate;
+    if (imm_flag) {
+        const imm = offset_operand.imm_operand.imm;
+        const rotate = offset_operand.imm_operand.rotate;
 
-        op2 = rotateRight(imm, rotate * 2);
+        offset = rotateRight(imm, rotate * 2);
     } else {
-        const rm = registers.get(instr.op2.reg_operand.rm);
-        const old_carry_flag = cpsr.carry_flag;
+        const rm_content = registers.get(offset_operand.reg_operand.rm);
 
         var shift: u32 = undefined;
         var to_shift = true;
 
-        switch (instr.op2.reg_operand.shift) {
+        switch (offset_operand.reg_operand.shift) {
             .shift_amount => |shift_amount| shift = shift_amount,
             .rs => |rs| {
                 shift = registers.get(rs) & 0xFF;
@@ -71,66 +63,80 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) vo
         }
 
         if (to_shift) {
-            switch (instr.op2.reg_operand.shift_type) {
+            switch (offset_operand.reg_operand.shift_type) {
                 .LogicalLeft => {
                     if (shift == 0) {
-                        shifter_carry = old_carry_flag;
-                        op2 = rm;
+                        offset = rm_content;
                     } else if (shift == 32) {
                         shifter_carry = false;
-                        op2 = 0;
+                        offset = 0;
                     } else if (shift > 32) {
-                        shifter_carry = rm & 1 == 1;
-                        op2 = 0;
+                        shifter_carry = rm_content & 1 == 1;
+                        offset = 0;
                     } else {
-                        shifter_carry = (rm >> @intCast(32 - shift)) & 1 == 1;
-                        op2 = rm << @intCast(shift);
+                        shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
+                        offset = rm_content << @intCast(shift);
                     }
                 },
                 .LogicalRight => {
                     if (shift == 0 or shift == 32) {
-                        shifter_carry = rm >> 31 == 1;
-                        op2 = 0;
+                        shifter_carry = rm_content >> 31 == 1;
+                        offset = 0;
                     } else if (shift > 32) {
                         shifter_carry = false;
-                        op2 = 0;
+                        offset = 0;
                     } else {
-                        shifter_carry = (rm >> @intCast(32 - shift)) & 1 == 1;
-                        op2 = rm >> @intCast(shift);
+                        shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
+                        offset = rm_content >> @intCast(shift);
                     }
                 },
                 .ArithmeticRight => {
                     if (shift == 0 or shift > 31) {
-                        shifter_carry = rm >> 31 == 1;
-                        op2 = 0xFFFF_FFFF * (rm >> 31);
+                        shifter_carry = rm_content >> 31 == 1;
+                        offset = 0xFFFF_FFFF * (rm_content >> 31);
                     } else {
-                        shifter_carry = (rm >> @intCast(shift - 1)) & 1 == 1;
+                        shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
 
-                        const rm_signed: i32 = @bitCast(rm);
-                        op2 = @bitCast(rm_signed >> @intCast(shift));
+                        const rm_signed: i32 = @bitCast(rm_content);
+                        offset = @bitCast(rm_signed >> @intCast(shift));
                     }
                 },
                 .RotateRight => {
                     while (shift > 32) : (shift -= 32) {}
 
                     if (shift == 0) {
-                        shifter_carry = rm & 1 == 1;
-                        op2 = if (old_carry_flag) (rm >> 1) | 0x8000_0000 else rm >> 1;
+                        shifter_carry = rm_content & 1 == 1;
+                        offset = if (cpsr.carry_flag) (rm_content >> 1) | 0x8000_0000 else rm_content >> 1;
                     }
                     if (shift == 32) {
-                        shifter_carry = rm >> 1 == 1;
-                        op2 = rm;
+                        shifter_carry = rm_content >> 1 == 1;
+                        offset = rm_content;
                     } else {
-                        shifter_carry = (rm >> @intCast(shift - 1)) & 1 == 1;
-                        op2 = rotateRight(rm, shift);
+                        shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
+                        offset = rotateRight(rm_content, shift);
                     }
                 },
             }
         } else {
-            shifter_carry = old_carry_flag;
-            op2 = rm;
+            offset = rm_content;
         }
     }
+
+    return .{ offset, shifter_carry };
+}
+
+pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) void {
+    var cpsr = &registers.cpsr;
+
+    const rd = instr.rd;
+    const rn_content = registers.get(instr.rn);
+    var alu_carry: ?bool = null;
+    var zero: ?bool = null;
+    var overflow: ?bool = null;
+    var negative: ?bool = null;
+    const offset_result = calcOffset(instr.imm_flag, instr.op2, registers);
+    const op2 = offset_result[0];
+    const shifter_carry = offset_result[1];
 
     switch (instr.opcode) {
         .AND => {
