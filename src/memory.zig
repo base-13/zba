@@ -30,7 +30,6 @@ pub const MemoryMap = struct {
 
     pub fn write(self: *MemoryMap, addr: u32, value: u32) void {
         switch (addr) {
-            0x00000000...0x00003FFF => write32(&self.bios, addr, value),
             0x02000000...0x0203FFFF => write32(&self.i_wram, addr - 0x02000000, value),
             0x03000000...0x03007FFF => write32(&self.e_wram, addr - 0x03000000, value),
             0x04000000...0x040003FE => log.warn("Write to IOR at {x} to be implemented later", .{addr}),
@@ -38,11 +37,6 @@ pub const MemoryMap = struct {
             0x05000200...0x050003FF => write32(&self.obj_palette, addr - 0x05000200, value),
             0x06000000...0x06017FFF => write32(&self.vram, addr - 0x06000000, value),
             0x07000000...0x070003FF => write32(&self.oam, addr - 0x07000000, value),
-            0x08000000...0x0DFFFFFF => {
-                const rom_addr = (addr - 0x08000000) % self.rom.len;
-
-                write32(&self.rom, rom_addr, value);
-            },
             0x0E000000...0x0E00FFFF => write32(&self.sram, addr - 0x0E000000, value),
             else => log.err("Attempted to write illegal memory address {x}", .{addr}),
         }
