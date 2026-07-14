@@ -7,26 +7,26 @@ fn write32(region: []u8, addr: u32, value: u32) void {
     std.mem.writeInt(u32, region[addr..][0..4], value, .little);
 }
 
-fn read32(region: []u8, addr: u32, value: u32) u32 {
-    return std.mem.readInt(u32, region[addr..][0..4], value, .little);
+fn read32(region: []u8, addr: u32) u32 {
+    return std.mem.readInt(u32, region[addr..][0..4], .little);
 }
 
 pub const MemoryMap = struct {
-    bios: [16 * 1024]u8, // 16 KiB
+    bios: [16 * 1024]u8 = @splat(0), // 16 KiB
 
-    i_wram: [32 * 1024]u8, // 32 KiB
-    e_wram: [256 * 1024]u8, // 256 KiB
-    vram: [96 * 1024]u8, // 96 KiB
+    i_wram: [32 * 1024]u8 = @splat(0), // 32 KiB
+    e_wram: [256 * 1024]u8 = @splat(0), // 256 KiB
+    vram: [96 * 1024]u8 = @splat(0), // 96 KiB
 
-    bg_palette: [512]u8, // 512 B
-    obj_palette: [512]u8, // 512 B
-    oam: [1024]u8, // 1 KiB
+    bg_palette: [512]u8 = @splat(0), // 512 B
+    obj_palette: [512]u8 = @splat(0), // 512 B
+    oam: [1024]u8 = @splat(0), // 1 KiB
 
-    rom: [32 * 1024 ** 2]u8, // 32 MiB
+    rom: [32 * 1024 * 1024]u8 = @splat(0), // 32 MiB
 
-    sram: [64 * 1024]u8, // 64 KiB
+    sram: [64 * 1024]u8 = @splat(0), // 64 KiB
 
-    io_registers: io.IORegisters,
+    io_registers: io.IORegisters = undefined,
 
     pub fn write(self: *MemoryMap, addr: u32, value: u32) void {
         switch (addr) {
@@ -56,7 +56,7 @@ pub const MemoryMap = struct {
             0x06000000...0x06017FFF => break :read_blk read32(&self.vram, addr - 0x06000000),
             0x07000000...0x070003FF => break :read_blk read32(&self.oam, addr - 0x07000000),
             0x08000000...0x0DFFFFFF => {
-                const rom_addr = (addr - 0x08000000) % self.rom.len;
+                const rom_addr: u32 = @intCast((addr - 0x08000000) % self.rom.len);
 
                 break :read_blk read32(&self.rom, rom_addr);
             },

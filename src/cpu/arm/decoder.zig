@@ -7,7 +7,7 @@ fn getNBits(instr: u32, start: u5, n: u5, T: type) T {
     return @intCast((instr >> start) & ((@as(u32, 1) << n) - 1));
 }
 
-const InstrDecodeError = error{InvalidInstruction};
+pub const InstrDecodeError = error{InvalidInstruction};
 
 fn decodeCondition(instr: u32) InstrDecodeError!is.Condition {
     const cond = getNBits(instr, 28, 4, u4);

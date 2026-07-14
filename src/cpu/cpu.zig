@@ -3,25 +3,33 @@ const is = @import("arm/instruction_set.zig");
 const cpu_state = @import("cpu_state.zig");
 const decoder = @import("arm/decoder.zig");
 const exec = @import("arm/exec.zig");
+const memory = @import("../memory.zig");
 
 var registers = cpu_state.Reigsters{};
 
-fn getInstr(pc: u32) !is.Instr {
-    const instr = std.mem.readInt(u32, rom[pc .. pc + 4][0..4], .little);
+fn getInstr(pc: u32) decoder.InstrDecodeError!is.Instr {
+    const instr = memory_map.read(pc);
 
     return decoder.decode(instr);
 }
 
-var rom: []u8 = undefined;
+var memory_map: memory.MemoryMap = .{};
+var last_instr_addr: u32 = undefined;
 
-pub fn setROM(new_rom: []u8) void {
-    rom = new_rom;
+pub fn setBIOS(bios: []u8) void {
+    if (bios.len > 16 * 1024) {
+        std.debug.print("BIOS too big", .{});
+        std.process.exit(1);
+    }
+
+    std.mem.copyForwards(u8, memory_map.bios[0..bios.len], bios);
+    last_instr_addr = @intCast(bios.len);
 }
 
 pub fn poll() !bool {
     const pc = registers.getPC();
 
-    if (pc >= rom.len) {
+    if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the last instruction
         const debug_fmt = "\n\nPC: {} GPRs: {any}\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
         std.debug.print(debug_fmt, .{
             registers.getPC(),

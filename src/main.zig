@@ -29,9 +29,8 @@ pub fn main(init: std.process.Init) !void {
     var file_reader = file.reader(io, &file_buf);
     var file_reader_interface = &file_reader.interface;
 
-    const rom = try file_reader_interface.readAlloc(allocator, file_size);
-
-    cpu.setROM(rom);
+    const bios = try file_reader_interface.readAlloc(allocator, file_size);
+    cpu.setBIOS(bios);
 
     var run = true;
 
