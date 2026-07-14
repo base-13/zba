@@ -17,39 +17,44 @@ fn decodeCondition(instr: u32) InstrDecodeError!is.Condition {
     return @enumFromInt(cond);
 }
 
-fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
-    if (getNBits(instr, 26, 2, u2) != 0) return InstrDecodeError.InvalidInstruction;
-
-    const imm_flag = getNBits(instr, 25, 1, u1) == 1;
-
+fn decodeOffset(offset: u12, imm_flag: bool) InstrDecodeError!is.OffsetOperand.Operand {
     var op2: is.OffsetOperand.Operand = undefined;
 
     if (imm_flag) {
         op2 = .{
             .imm_operand = .{
-                .rotate = getNBits(instr, 8, 4, u4),
-                .imm = getNBits(instr, 0, 8, u8),
+                .rotate = getNBits(offset, 8, 4, u4),
+                .imm = getNBits(offset, 0, 8, u8),
             },
         };
     } else {
         var shift: is.OffsetOperand.RegOffsetShift = undefined;
 
-        if (getNBits(instr, 4, 1, u1) == 1) {
-            if (getNBits(instr, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
+        if (getNBits(offset, 4, 1, u1) == 1) {
+            if (getNBits(offset, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
 
-            shift = .{ .rs = getNBits(instr, 8, 4, u4) };
+            shift = .{ .rs = getNBits(offset, 8, 4, u4) };
         } else {
-            shift = .{ .shift_amount = getNBits(instr, 7, 5, u5) };
+            shift = .{ .shift_amount = getNBits(offset, 7, 5, u5) };
         }
 
         op2 = .{
             .reg_operand = .{
                 .shift = shift,
-                .shift_type = @enumFromInt(getNBits(instr, 5, 2, u2)),
-                .rm = getNBits(instr, 0, 4, u4),
+                .shift_type = @enumFromInt(getNBits(offset, 5, 2, u2)),
+                .rm = getNBits(offset, 0, 4, u4),
             },
         };
     }
+
+    return op2;
+}
+
+fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
+    if (getNBits(instr, 26, 2, u2) != 0) return InstrDecodeError.InvalidInstruction;
+
+    const imm_flag = getNBits(instr, 25, 1, u1) == 1;
+    const op2 = try decodeOffset(getNBits(instr, 0, 12, u12), imm_flag);
 
     const opcode: is.DataProcInstrOpcode = @enumFromInt(getNBits(instr, 21, 4, u4));
     const set_cond_flag = switch (opcode) {
@@ -192,6 +197,25 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
     }
 }
 
+fn decodeSingleDataTransfer(instr: u32) InstrDecodeError!is.SingleDataTransferInstr {
+    if (getNBits(instr, 26, 2, u2) != 0b01) return InstrDecodeError.InvalidInstruction;
+
+    const imm_flag = getNBits(instr, 25, 1, u1) == 1;
+    const op2 = try decodeOffset(getNBits(instr, 0, 12, u12), imm_flag);
+
+    return .{
+        .imm_flag = imm_flag,
+        .pre_index = getNBits(instr, 24, 1, u1) == 1,
+        .add_offset = getNBits(instr, 23, 1, u1) == 1,
+        .transfer_byte = getNBits(instr, 22, 1, u1) == 1,
+        .write_back = getNBits(instr, 21, 1, u1) == 1,
+        .load = getNBits(instr, 20, 1, u1) == 1,
+        .rn = getNBits(instr, 16, 4, u4),
+        .rd = getNBits(instr, 12, 4, u4),
+        .op2 = op2,
+    };
+}
+
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -215,6 +239,9 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const data_proc_bitmask = 0b0000_11_00000000000000000000000000;
     const data_proc_test = 0b0000_00_00000000000000000000000000;
 
+    const single_data_transfer_bitmask = 0b0000_11_00000000000000000000000000;
+    const single_data_transfer_test = 0b0000_01_00000000000000000000000000;
+
     const branch_with_link_bitmask = 0b0000_111_0000000000000000000000000;
     const branch_with_link_test = 0b0000_101_0000000000000000000000000;
 
@@ -231,6 +258,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
         fields = .{ .psr_transfer = try decodePSRTransferInstr(instr) }
     else if (instr & data_proc_bitmask == data_proc_test)
         fields = .{ .data_proc = try decodeDataProcInstr(instr) }
+    else if (instr & single_data_transfer_bitmask == single_data_transfer_test)
+        fields = .{ .single_data_transfer_instr = try decodeSingleDataTransfer(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)
         fields = .{ .branch_with_link = try decodeBranchWithLinkInstr(instr) }
     else

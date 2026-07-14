@@ -45,6 +45,10 @@ pub fn poll() !bool {
         .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
         .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
         .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
+        .single_data_transfer_instr => std.debug.print("{} {}\n", .{
+            instr,
+            instr.fields.single_data_transfer_instr.op2,
+        }),
     }
 
     if (exec.checkCondition(instr, &registers))
@@ -55,6 +59,7 @@ pub fn poll() !bool {
             .multiply_long => |i| exec.execMultiplyLong(i, &registers),
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
+            .single_data_transfer_instr => {},
         };
 
     // PC may have been updated by instruction so we use the latest value

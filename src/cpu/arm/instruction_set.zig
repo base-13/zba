@@ -111,6 +111,18 @@ pub const PSRTransferInstr = struct {
     },
 };
 
+pub const SingleDataTransferInstr = struct {
+    imm_flag: bool,
+    pre_index: bool,
+    add_offset: bool,
+    transfer_byte: bool,
+    write_back: bool,
+    load: bool,
+    rn: u4,
+    rd: u4,
+    op2: OffsetOperand.Operand,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -118,6 +130,7 @@ pub const Fields = union(enum) {
     multiply_long: MultiplyLongInstr,
     psr_transfer: PSRTransferInstr,
     software_interrupt: SoftwareInterruptInstr,
+    single_data_transfer_instr: SingleDataTransferInstr,
 };
 
 pub const Instr = struct {
