@@ -17,35 +17,26 @@ fn decodeCondition(instr: u32) InstrDecodeError!is.Condition {
     return @enumFromInt(cond);
 }
 
-fn decodeOffset(offset: u12, imm_flag: bool) InstrDecodeError!is.OffsetOperand.Operand {
+fn decodeRegOffset(offset: u12) InstrDecodeError!is.OffsetOperand.Operand {
     var op2: is.OffsetOperand.Operand = undefined;
 
-    if (imm_flag) {
-        op2 = .{
-            .imm_operand = .{
-                .rotate = getNBits(offset, 8, 4, u4),
-                .imm = getNBits(offset, 0, 8, u8),
-            },
-        };
+    var shift: is.OffsetOperand.RegOffsetShift = undefined;
+
+    if (getNBits(offset, 4, 1, u1) == 1) {
+        if (getNBits(offset, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
+
+        shift = .{ .rs = getNBits(offset, 8, 4, u4) };
     } else {
-        var shift: is.OffsetOperand.RegOffsetShift = undefined;
-
-        if (getNBits(offset, 4, 1, u1) == 1) {
-            if (getNBits(offset, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
-
-            shift = .{ .rs = getNBits(offset, 8, 4, u4) };
-        } else {
-            shift = .{ .shift_amount = getNBits(offset, 7, 5, u5) };
-        }
-
-        op2 = .{
-            .reg_operand = .{
-                .shift = shift,
-                .shift_type = @enumFromInt(getNBits(offset, 5, 2, u2)),
-                .rm = getNBits(offset, 0, 4, u4),
-            },
-        };
+        shift = .{ .shift_amount = getNBits(offset, 7, 5, u5) };
     }
+
+    op2 = .{
+        .reg_operand = .{
+            .shift = shift,
+            .shift_type = @enumFromInt(getNBits(offset, 5, 2, u2)),
+            .rm = getNBits(offset, 0, 4, u4),
+        },
+    };
 
     return op2;
 }
@@ -54,7 +45,18 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
     if (getNBits(instr, 26, 2, u2) != 0) return InstrDecodeError.InvalidInstruction;
 
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
-    const op2 = try decodeOffset(getNBits(instr, 0, 12, u12), imm_flag);
+    var op2: is.OffsetOperand.Operand = undefined;
+
+    if (imm_flag) {
+        op2 = .{
+            .rotated_imm_operand = .{
+                .rotate = getNBits(instr, 8, 4, u4),
+                .imm = getNBits(instr, 0, 8, u8),
+            },
+        };
+    } else {
+        op2 = try decodeRegOffset(getNBits(instr, 0, 12, u12));
+    }
 
     const opcode: is.DataProcInstrOpcode = @enumFromInt(getNBits(instr, 21, 4, u4));
     const set_cond_flag = switch (opcode) {
@@ -201,7 +203,12 @@ fn decodeSingleDataTransfer(instr: u32) InstrDecodeError!is.SingleDataTransferIn
     if (getNBits(instr, 26, 2, u2) != 0b01) return InstrDecodeError.InvalidInstruction;
 
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
-    const op2 = try decodeOffset(getNBits(instr, 0, 12, u12), imm_flag);
+    var op2: is.OffsetOperand.Operand = undefined;
+
+    if (imm_flag)
+        op2 = try decodeRegOffset(getNBits(instr, 0, 12, u12))
+    else
+        op2 = .{ .imm_operand = getNBits(instr, 0, 12, u12) };
 
     return .{
         .imm_flag = imm_flag,

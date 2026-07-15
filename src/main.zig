@@ -35,6 +35,6 @@ pub fn main(init: std.process.Init) !void {
     var run = true;
 
     while (run) {
-        run = try cpu.poll();
+        run = try cpu.poll(io);
     }
 }

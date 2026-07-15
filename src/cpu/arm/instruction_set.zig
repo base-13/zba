@@ -35,10 +35,11 @@ pub const OffsetOperand = struct {
             shift_type: ShiftType,
             rm: u4,
         },
-        imm_operand: struct {
+        rotated_imm_operand: struct {
             rotate: u4,
             imm: u8,
         },
+        imm_operand: u12,
     };
 };
 

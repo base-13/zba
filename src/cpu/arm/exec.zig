@@ -1,6 +1,7 @@
 const std = @import("std");
 const is = @import("instruction_set.zig");
 const cpu_state = @import("../cpu_state.zig");
+const memory = @import("../../memory.zig");
 
 const log = std.log.scoped(.exec);
 
@@ -37,89 +38,81 @@ pub fn checkCondition(instr: is.Instr, registers: *cpu_state.Reigsters) bool {
     };
 }
 
-fn calcOffset(imm_flag: bool, offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Reigsters) struct { u32, ?bool } {
-    const cpsr = &registers.cpsr;
+fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Reigsters) struct { u32, ?bool } {
     var offset: u32 = undefined;
     var shifter_carry: ?bool = null;
 
-    if (imm_flag) {
-        const imm = offset_operand.imm_operand.imm;
-        const rotate = offset_operand.imm_operand.rotate;
+    const rm_content = registers.get(offset_operand.reg_operand.rm);
 
-        offset = rotateRight(imm, rotate * 2);
-    } else {
-        const rm_content = registers.get(offset_operand.reg_operand.rm);
+    var shift: u32 = undefined;
+    var to_shift = true;
 
-        var shift: u32 = undefined;
-        var to_shift = true;
+    switch (offset_operand.reg_operand.shift) {
+        .shift_amount => |shift_amount| shift = shift_amount,
+        .rs => |rs| {
+            shift = registers.get(rs) & 0xFF;
 
-        switch (offset_operand.reg_operand.shift) {
-            .shift_amount => |shift_amount| shift = shift_amount,
-            .rs => |rs| {
-                shift = registers.get(rs) & 0xFF;
+            if (shift == 0) to_shift = false;
+        },
+    }
 
-                if (shift == 0) to_shift = false;
+    if (to_shift) {
+        switch (offset_operand.reg_operand.shift_type) {
+            .LogicalLeft => {
+                if (shift == 0) {
+                    offset = rm_content;
+                } else if (shift == 32) {
+                    shifter_carry = false;
+                    offset = 0;
+                } else if (shift > 32) {
+                    shifter_carry = rm_content & 1 == 1;
+                    offset = 0;
+                } else {
+                    shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
+                    offset = rm_content << @intCast(shift);
+                }
+            },
+            .LogicalRight => {
+                if (shift == 0 or shift == 32) {
+                    shifter_carry = rm_content >> 31 == 1;
+                    offset = 0;
+                } else if (shift > 32) {
+                    shifter_carry = false;
+                    offset = 0;
+                } else {
+                    shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
+                    offset = rm_content >> @intCast(shift);
+                }
+            },
+            .ArithmeticRight => {
+                if (shift == 0 or shift > 31) {
+                    shifter_carry = rm_content >> 31 == 1;
+                    offset = 0xFFFF_FFFF * (rm_content >> 31);
+                } else {
+                    shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
+
+                    const rm_signed: i32 = @bitCast(rm_content);
+                    offset = @bitCast(rm_signed >> @intCast(shift));
+                }
+            },
+            .RotateRight => {
+                while (shift > 32) : (shift -= 32) {}
+
+                if (shift == 0) {
+                    shifter_carry = rm_content & 1 == 1;
+                    offset = if (registers.cpsr.carry_flag) (rm_content >> 1) | 0x8000_0000 else rm_content >> 1;
+                }
+                if (shift == 32) {
+                    shifter_carry = rm_content >> 1 == 1;
+                    offset = rm_content;
+                } else {
+                    shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
+                    offset = rotateRight(rm_content, shift);
+                }
             },
         }
-
-        if (to_shift) {
-            switch (offset_operand.reg_operand.shift_type) {
-                .LogicalLeft => {
-                    if (shift == 0) {
-                        offset = rm_content;
-                    } else if (shift == 32) {
-                        shifter_carry = false;
-                        offset = 0;
-                    } else if (shift > 32) {
-                        shifter_carry = rm_content & 1 == 1;
-                        offset = 0;
-                    } else {
-                        shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
-                        offset = rm_content << @intCast(shift);
-                    }
-                },
-                .LogicalRight => {
-                    if (shift == 0 or shift == 32) {
-                        shifter_carry = rm_content >> 31 == 1;
-                        offset = 0;
-                    } else if (shift > 32) {
-                        shifter_carry = false;
-                        offset = 0;
-                    } else {
-                        shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
-                        offset = rm_content >> @intCast(shift);
-                    }
-                },
-                .ArithmeticRight => {
-                    if (shift == 0 or shift > 31) {
-                        shifter_carry = rm_content >> 31 == 1;
-                        offset = 0xFFFF_FFFF * (rm_content >> 31);
-                    } else {
-                        shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
-
-                        const rm_signed: i32 = @bitCast(rm_content);
-                        offset = @bitCast(rm_signed >> @intCast(shift));
-                    }
-                },
-                .RotateRight => {
-                    while (shift > 32) : (shift -= 32) {}
-
-                    if (shift == 0) {
-                        shifter_carry = rm_content & 1 == 1;
-                        offset = if (cpsr.carry_flag) (rm_content >> 1) | 0x8000_0000 else rm_content >> 1;
-                    }
-                    if (shift == 32) {
-                        shifter_carry = rm_content >> 1 == 1;
-                        offset = rm_content;
-                    } else {
-                        shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
-                        offset = rotateRight(rm_content, shift);
-                    }
-                },
-            }
-        } else {
-            offset = rm_content;
-        }
+    } else {
+        offset = rm_content;
     }
 
     return .{ offset, shifter_carry };
@@ -134,9 +127,19 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) vo
     var zero: ?bool = null;
     var overflow: ?bool = null;
     var negative: ?bool = null;
-    const offset_result = calcOffset(instr.imm_flag, instr.op2, registers);
-    const op2 = offset_result[0];
-    const shifter_carry = offset_result[1];
+    var op2: u32 = undefined;
+    var shifter_carry: ?bool = null;
+
+    if (instr.imm_flag) {
+        const imm = instr.op2.rotated_imm_operand.imm;
+        const rotate: u32 = @intCast(instr.op2.rotated_imm_operand.rotate);
+
+        op2 = rotateRight(imm, rotate * 2);
+    } else {
+        const offset_result = calcRegOffset(instr.op2, registers);
+        op2 = offset_result[0];
+        shifter_carry = offset_result[1];
+    }
 
     switch (instr.opcode) {
         .AND => {
@@ -434,4 +437,51 @@ pub fn execSoftwareInterrupt(registers: *cpu_state.Reigsters) void {
     registers.cpsr.irq_disable = true;
     registers.set(14, registers.pc + 0x4);
     registers.setPC(0x8);
+}
+
+pub fn execSingleDataTransfer(
+    instr: is.SingleDataTransferInstr,
+    reigsters: *cpu_state.Reigsters,
+    memory_map: *memory.MemoryMap,
+) void {
+    const rn_content = reigsters.get(instr.rn);
+    var address: u32 = undefined;
+    var modified_base: u32 = undefined;
+    var offset: u32 = undefined;
+
+    if (instr.imm_flag)
+        offset = calcRegOffset(instr.op2, reigsters)[0]
+    else
+        offset = instr.op2.imm_operand;
+
+    if (instr.add_offset)
+        modified_base = rn_content +% offset
+    else
+        modified_base = rn_content -% offset;
+
+    if (instr.pre_index) {
+        address = modified_base;
+
+        if (instr.write_back)
+            reigsters.set(instr.rn, modified_base);
+    } else {
+        address = rn_content;
+        reigsters.set(instr.rn, modified_base);
+    }
+
+    if (instr.load) {
+        const value = memory_map.read(address);
+
+        if (instr.transfer_byte)
+            reigsters.set(instr.rd, value & 0xFF)
+        else
+            reigsters.set(instr.rd, value);
+    } else {
+        const value = reigsters.get(instr.rd);
+
+        if (instr.transfer_byte)
+            memory_map.write(address, value & 0xFF)
+        else
+            memory_map.write(address, value);
+    }
 }

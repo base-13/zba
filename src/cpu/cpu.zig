@@ -26,7 +26,7 @@ pub fn setBIOS(bios: []u8) void {
     last_instr_addr = @intCast(bios.len);
 }
 
-pub fn poll() !bool {
+pub fn poll(io: std.Io) !bool {
     const pc = registers.getPC();
 
     if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the last instruction
@@ -41,19 +41,28 @@ pub fn poll() !bool {
             registers.svc,
             registers.und,
         });
+
+        const i_wram_file = try std.Io.Dir.cwd().createFile(io, "i_wram.bin", .{});
+        const e_wram_file = try std.Io.Dir.cwd().createFile(io, "e_wram.bin", .{});
+        defer i_wram_file.close(io);
+        defer e_wram_file.close(io);
+
+        try i_wram_file.writeStreamingAll(io, &memory_map.i_wram);
+        try e_wram_file.writeStreamingAll(io, &memory_map.e_wram);
+
         return false;
     }
 
     const instr = try getInstr(pc);
 
     switch (instr.fields) {
-        .data_proc => std.debug.print("{} {}\n", .{ instr, instr.fields.data_proc.op2 }),
+        .data_proc => std.debug.print("{} op2={}\n", .{ instr, instr.fields.data_proc.op2 }),
         .branch_with_link => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.branch_with_link }),
         .multiply => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply }),
         .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
         .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
         .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
-        .single_data_transfer_instr => std.debug.print("{} {}\n", .{
+        .single_data_transfer_instr => std.debug.print("{} op2={}\n", .{
             instr,
             instr.fields.single_data_transfer_instr.op2,
         }),
@@ -67,7 +76,7 @@ pub fn poll() !bool {
             .multiply_long => |i| exec.execMultiplyLong(i, &registers),
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
-            .single_data_transfer_instr => {},
+            .single_data_transfer_instr => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
         };
 
     // PC may have been updated by instruction so we use the latest value
