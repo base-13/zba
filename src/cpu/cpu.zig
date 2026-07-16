@@ -66,6 +66,7 @@ pub fn poll(io: std.Io) !bool {
             instr,
             instr.fields.single_data_transfer_instr.op2,
         }),
+        .single_data_swap => std.debug.print("{} {}", .{ instr.cond, instr.fields.single_data_swap }),
     }
 
     if (exec.checkCondition(instr, &registers))
@@ -77,6 +78,7 @@ pub fn poll(io: std.Io) !bool {
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
             .single_data_transfer_instr => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
+            .single_data_swap => {},
         };
 
     // PC may have been updated by instruction so we use the latest value

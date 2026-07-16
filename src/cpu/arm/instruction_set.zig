@@ -124,6 +124,13 @@ pub const SingleDataTransferInstr = struct {
     op2: OffsetOperand.Operand,
 };
 
+pub const SingleDataSwapInstr = struct {
+    swap_byte: bool,
+    rn: u4,
+    rd: u4,
+    rm: u4,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -132,6 +139,7 @@ pub const Fields = union(enum) {
     psr_transfer: PSRTransferInstr,
     software_interrupt: SoftwareInterruptInstr,
     single_data_transfer_instr: SingleDataTransferInstr,
+    single_data_swap: SingleDataSwapInstr,
 };
 
 pub const Instr = struct {
