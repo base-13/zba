@@ -78,7 +78,7 @@ pub fn poll(io: std.Io) !bool {
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
             .single_data_transfer => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
-            .single_data_swap => {},
+            .single_data_swap => |i| exec.execSingleDataSwap(i, &registers, &memory_map),
         };
 
     // PC may have been updated by instruction so we use the latest value

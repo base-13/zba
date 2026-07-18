@@ -181,11 +181,20 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
 }
 
 fn decodeSingleDataSwapInstr(instr: u32) is.SingleDataSwapInstr {
+    const rn = getNBits(instr, 16, 4, u4);
+    const rd = getNBits(instr, 12, 4, u4);
+    const rm = getNBits(instr, 0, 4, u4);
+
+    if ((rn == 15) or
+        (rd == 15) or
+        (rm == 15))
+        log.warn("Invalid registers: R15 can't be used", .{});
+
     return .{
         .swap_byte = getNBits(instr, 22, 1, u1) == 1,
-        .rn = getNBits(instr, 16, 4, u4),
-        .rd = getNBits(instr, 12, 4, u4),
-        .rm = getNBits(instr, 0, 4, u4),
+        .rn = rn,
+        .rd = rd,
+        .rm = rm,
     };
 }
 

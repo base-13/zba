@@ -441,16 +441,16 @@ pub fn execSoftwareInterrupt(registers: *cpu_state.Reigsters) void {
 
 pub fn execSingleDataTransfer(
     instr: is.SingleDataTransferInstr,
-    reigsters: *cpu_state.Reigsters,
+    registers: *cpu_state.Reigsters,
     memory_map: *memory.MemoryMap,
 ) void {
-    const rn_content = reigsters.get(instr.rn);
+    const rn_content = registers.get(instr.rn);
     var address: u32 = undefined;
     var modified_base: u32 = undefined;
     var offset: u32 = undefined;
 
     if (instr.imm_flag)
-        offset = calcRegOffset(instr.op2, reigsters)[0]
+        offset = calcRegOffset(instr.op2, registers)[0]
     else
         offset = instr.op2.imm_operand;
 
@@ -463,25 +463,44 @@ pub fn execSingleDataTransfer(
         address = modified_base;
 
         if (instr.write_back)
-            reigsters.set(instr.rn, modified_base);
+            registers.set(instr.rn, modified_base);
     } else {
         address = rn_content;
-        reigsters.set(instr.rn, modified_base);
+        registers.set(instr.rn, modified_base);
     }
 
     if (instr.load) {
         const value = memory_map.read(address);
 
         if (instr.transfer_byte)
-            reigsters.set(instr.rd, value & 0xFF)
+            registers.set(instr.rd, value & 0xFF)
         else
-            reigsters.set(instr.rd, value);
+            registers.set(instr.rd, value);
     } else {
-        const value = reigsters.get(instr.rd);
+        const value = registers.get(instr.rd);
 
         if (instr.transfer_byte)
             memory_map.write(address, value & 0xFF)
         else
             memory_map.write(address, value);
     }
+}
+
+pub fn execSingleDataSwap(
+    instr: is.SingleDataSwapInstr,
+    registers: *cpu_state.Reigsters,
+    memory_map: *memory.MemoryMap,
+) void {
+    const addr = registers.get(instr.rn);
+
+    var old_value = memory_map.read(addr);
+    var new_value = registers.get(instr.rd);
+
+    if (instr.swap_byte) {
+        old_value = old_value & 0xFF;
+        new_value = new_value & 0xFF;
+    }
+
+    registers.set(instr.rm, old_value);
+    memory_map.write(addr, new_value);
 }
