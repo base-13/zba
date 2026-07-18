@@ -42,8 +42,6 @@ fn decodeRegOffset(offset: u12) InstrDecodeError!is.OffsetOperand.Operand {
 }
 
 fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
-    if (getNBits(instr, 26, 2, u2) != 0) return InstrDecodeError.InvalidInstruction;
-
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
     var op2: is.OffsetOperand.Operand = undefined;
 
@@ -74,20 +72,14 @@ fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
     };
 }
 
-fn decodeBranchWithLinkInstr(instr: u32) InstrDecodeError!is.BranchWithLink {
-    if (getNBits(instr, 25, 3, u3) != 0b101)
-        return InstrDecodeError.InvalidInstruction;
-
+fn decodeBranchWithLinkInstr(instr: u32) is.BranchWithLink {
     return .{
         .link = getNBits(instr, 24, 1, u1) == 1,
         .offset = @bitCast(getNBits(instr, 0, 24, u24)),
     };
 }
 
-fn decodeMultiplyInstr(instr: u32) InstrDecodeError!is.MultiplyInstr {
-    if (getNBits(instr, 22, 6, u6) != 0) return InstrDecodeError.InvalidInstruction;
-    if (getNBits(instr, 4, 4, u4) != 0b1001) return InstrDecodeError.InvalidInstruction;
-
+fn decodeMultiplyInstr(instr: u32) is.MultiplyInstr {
     const rd = getNBits(instr, 16, 4, u4);
     const rn = getNBits(instr, 12, 4, u4);
     const rs = getNBits(instr, 8, 4, u4);
@@ -108,10 +100,7 @@ fn decodeMultiplyInstr(instr: u32) InstrDecodeError!is.MultiplyInstr {
     };
 }
 
-fn decodeMultiplyLongInstr(instr: u32) InstrDecodeError!is.MultiplyLongInstr {
-    if (getNBits(instr, 23, 5, u5) != 1) return InstrDecodeError.InvalidInstruction;
-    if (getNBits(instr, 4, 4, u4) != 0b1001) return InstrDecodeError.InvalidInstruction;
-
+fn decodeMultiplyLongInstr(instr: u32) is.MultiplyLongInstr {
     const rd_high = getNBits(instr, 16, 4, u4);
     const rd_low = getNBits(instr, 12, 4, u4);
     const rs = getNBits(instr, 8, 4, u4);
@@ -136,17 +125,6 @@ fn decodeMultiplyLongInstr(instr: u32) InstrDecodeError!is.MultiplyLongInstr {
 fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
-
-    const msr_reg_bitmask = 0b0000_11111_0_11_0000_111111111111_0000;
-    const msr_reg_test = 0b0000_00010_0_10_0000_111100000000_0000;
-
-    const msr_imm_bitmask = 0b0000_11111_0_11_0000_1111_00000000_0000;
-    const msr_imm_test = 0b0000_00110_0_10_0000_1111_00000000_0000;
-
-    if ((instr & mrs_bitmask != mrs_test) and
-        (instr & msr_reg_bitmask != msr_reg_test) and
-        (instr & msr_imm_bitmask != msr_imm_test))
-        return InstrDecodeError.InvalidInstruction;
 
     const cpsr = getNBits(instr, 22, 1, u1) == 0;
 
@@ -183,6 +161,9 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
                 } },
             }
         else {
+            if (getNBits(instr, 4, 8, u8) != 0)
+                return InstrDecodeError.InvalidInstruction;
+
             const rm = getNBits(instr, 0, 4, u4);
             if (rm == 15) log.warn("Invalid registers: R15 can't be used", .{});
 
@@ -199,10 +180,7 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
     }
 }
 
-fn decodeSingleDataSwapInstr(instr: u32) InstrDecodeError!is.SingleDataSwapInstr {
-    if (getNBits(instr, 23, 5, u5) != 0b10) return InstrDecodeError.InvalidInstruction;
-    if (getNBits(instr, 4, 8, u4) != 0b1001) return InstrDecodeError.InvalidInstruction;
-
+fn decodeSingleDataSwapInstr(instr: u32) is.SingleDataSwapInstr {
     return .{
         .swap_byte = getNBits(instr, 22, 1, u1) == 1,
         .rn = getNBits(instr, 16, 4, u4),
@@ -211,9 +189,7 @@ fn decodeSingleDataSwapInstr(instr: u32) InstrDecodeError!is.SingleDataSwapInstr
     };
 }
 
-fn decodeSingleDataTransfer(instr: u32) InstrDecodeError!is.SingleDataTransferInstr {
-    if (getNBits(instr, 26, 2, u2) != 0b01) return InstrDecodeError.InvalidInstruction;
-
+fn decodeSingleDataTransferInstr(instr: u32) InstrDecodeError!is.SingleDataTransferInstr {
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
     var op2: is.OffsetOperand.Operand = undefined;
 
@@ -273,19 +249,19 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         fields = .{ .software_interrupt = .{} }
     else if (instr & multiply_bitmask == multiply_test)
-        fields = .{ .multiply = try decodeMultiplyInstr(instr) }
+        fields = .{ .multiply = decodeMultiplyInstr(instr) }
     else if (instr & multiply_long_bitmask == multiply_long_test)
-        fields = .{ .multiply_long = try decodeMultiplyLongInstr(instr) }
+        fields = .{ .multiply_long = decodeMultiplyLongInstr(instr) }
     else if (instr & single_data_swap_bitmask == single_data_swap_test)
-        fields = .{ .single_data_swap = try decodeSingleDataSwapInstr(instr) }
+        fields = .{ .single_data_swap = decodeSingleDataSwapInstr(instr) }
     else if (checkPSRTransferInstr(instr))
         fields = .{ .psr_transfer = try decodePSRTransferInstr(instr) }
     else if (instr & data_proc_bitmask == data_proc_test)
         fields = .{ .data_proc = try decodeDataProcInstr(instr) }
     else if (instr & single_data_transfer_bitmask == single_data_transfer_test)
-        fields = .{ .single_data_transfer = try decodeSingleDataTransfer(instr) }
+        fields = .{ .single_data_transfer = try decodeSingleDataTransferInstr(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)
-        fields = .{ .branch_with_link = try decodeBranchWithLinkInstr(instr) }
+        fields = .{ .branch_with_link = decodeBranchWithLinkInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 
