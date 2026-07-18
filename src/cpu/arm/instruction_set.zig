@@ -138,7 +138,7 @@ pub const Fields = union(enum) {
     multiply_long: MultiplyLongInstr,
     psr_transfer: PSRTransferInstr,
     software_interrupt: SoftwareInterruptInstr,
-    single_data_transfer_instr: SingleDataTransferInstr,
+    single_data_transfer: SingleDataTransferInstr,
     single_data_swap: SingleDataSwapInstr,
 };
 

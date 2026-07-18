@@ -62,9 +62,9 @@ pub fn poll(io: std.Io) !bool {
         .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
         .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
         .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
-        .single_data_transfer_instr => std.debug.print("{} op2={}\n", .{
+        .single_data_transfer => std.debug.print("{} op2={}\n", .{
             instr,
-            instr.fields.single_data_transfer_instr.op2,
+            instr.fields.single_data_transfer.op2,
         }),
         .single_data_swap => std.debug.print("{} {}", .{ instr.cond, instr.fields.single_data_swap }),
     }
@@ -77,7 +77,7 @@ pub fn poll(io: std.Io) !bool {
             .multiply_long => |i| exec.execMultiplyLong(i, &registers),
             .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
-            .single_data_transfer_instr => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
+            .single_data_transfer => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
             .single_data_swap => {},
         };
 

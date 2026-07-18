@@ -283,7 +283,7 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     else if (instr & data_proc_bitmask == data_proc_test)
         fields = .{ .data_proc = try decodeDataProcInstr(instr) }
     else if (instr & single_data_transfer_bitmask == single_data_transfer_test)
-        fields = .{ .single_data_transfer_instr = try decodeSingleDataTransfer(instr) }
+        fields = .{ .single_data_transfer = try decodeSingleDataTransfer(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)
         fields = .{ .branch_with_link = try decodeBranchWithLinkInstr(instr) }
     else
