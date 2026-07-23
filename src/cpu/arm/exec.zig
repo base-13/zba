@@ -494,13 +494,13 @@ pub fn execSingleDataSwap(
     const addr = registers.get(instr.rn);
 
     var old_value = memory_map.read(addr);
-    var new_value = registers.get(instr.rd);
+    var new_value = registers.get(instr.rm);
 
     if (instr.swap_byte) {
         old_value = old_value & 0xFF;
         new_value = new_value & 0xFF;
     }
 
-    registers.set(instr.rm, old_value);
+    registers.set(instr.rd, old_value);
     memory_map.write(addr, new_value);
 }
