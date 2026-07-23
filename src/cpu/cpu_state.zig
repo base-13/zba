@@ -217,8 +217,8 @@ pub const Reigsters = struct {
                 .Undefined => self.und.r13_14[reg - 13],
                 else => self.r[reg],
             }
-        else if (reg == 15) // emulate prefetching, pc stays ahead 4B(ARM mode) or 2B(Thumb mode)
-            return self.r[15] +| if (self.cpsr.thumb_state) @as(u32, 2) else @as(u32, 4)
+        else if (reg == 15) // emulate prefetching, pc stays ahead 4B(Thumb mode) or 8B(ARM mode)
+            return self.r[15] +| if (self.cpsr.thumb_state) @as(u32, 4) else @as(u32, 8)
         else
             return self.r[reg];
     }
