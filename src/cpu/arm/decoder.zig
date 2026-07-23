@@ -240,8 +240,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const multiply_long_bitmask = 0b0000_11111_000000000000000_1111_0000;
     const multiply_long_test = 0b0000_00001_000000000000000_1001_0000;
 
-    const single_data_swap_bitmask = 0b0000_11111_11_000000000_1111_1111_0000;
-    const single_data_swap_test = 0b0000_00010_00_000000000_0000_1001_0000;
+    const single_data_swap_bitmask = 0b0000_11111_0_11_00000000_1111_1111_0000;
+    const single_data_swap_test = 0b0000_00010_0_00_00000000_0000_1001_0000;
 
     const data_proc_bitmask = 0b0000_11_00000000000000000000000000;
     const data_proc_test = 0b0000_00_00000000000000000000000000;
