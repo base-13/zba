@@ -479,10 +479,13 @@ pub fn execSingleDataTransfer(
     } else {
         const value = registers.get(instr.rd);
 
-        if (instr.transfer_byte)
-            memory_map.write(address, value & 0xFF)
-        else
+        if (instr.transfer_byte) {
+            const old_value = memory_map.read(address);
+
+            memory_map.write(address, (old_value & 0xFFFF_FF00) | (value & 0xFF));
+        } else {
             memory_map.write(address, value);
+        }
     }
 }
 
@@ -493,14 +496,14 @@ pub fn execSingleDataSwap(
 ) void {
     const addr = registers.get(instr.rn);
 
-    var old_value = memory_map.read(addr);
-    var new_value = registers.get(instr.rm);
+    const old_value = memory_map.read(addr);
+    const new_value = registers.get(instr.rm);
 
     if (instr.swap_byte) {
-        old_value = old_value & 0xFF;
-        new_value = new_value & 0xFF;
+        registers.set(instr.rd, old_value & 0xFF);
+        memory_map.write(addr, (old_value & 0xFFFF_FF00) | (new_value & 0xFF));
+    } else {
+        registers.set(instr.rd, old_value);
+        memory_map.write(addr, new_value);
     }
-
-    registers.set(instr.rd, old_value);
-    memory_map.write(addr, new_value);
 }
