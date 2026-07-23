@@ -30,10 +30,12 @@ pub fn poll(io: std.Io) !bool {
     const pc = registers.getPC();
 
     if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the last instruction
-        const debug_fmt = "\n\nPC: {} GPRs: {any}\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
+        std.debug.print("\n\nPC: {} GPRs: ", .{registers.getPC()});
+        for (0..16) |i|
+            std.debug.print("r{}=0x{X} ", .{ i, registers.r[i] });
+
+        const debug_fmt = "\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
         std.debug.print(debug_fmt, .{
-            registers.getPC(),
-            registers.r,
             registers.cpsr,
             registers.fiq,
             registers.irq,
