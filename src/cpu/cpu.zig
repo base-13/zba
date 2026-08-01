@@ -32,7 +32,7 @@ pub fn poll(io: std.Io) !bool {
     if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the last instruction
         std.debug.print("\n\nPC: {} GPRs: ", .{registers.getPC()});
         for (0..16) |i|
-            std.debug.print("r{}=0x{X} ", .{ i, registers.r[i] });
+            std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
 
         const debug_fmt = "\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
         std.debug.print(debug_fmt, .{
@@ -68,7 +68,8 @@ pub fn poll(io: std.Io) !bool {
             instr,
             instr.fields.single_data_transfer.op2,
         }),
-        .single_data_swap => std.debug.print("{} {}", .{ instr.cond, instr.fields.single_data_swap }),
+        .single_data_swap => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.single_data_swap }),
+        .h_and_s_data_transfer => std.debug.print("{} op2={}\n", .{ instr, instr.fields.h_and_s_data_transfer.op2 }),
     }
 
     if (exec.checkCondition(instr, &registers))
@@ -81,6 +82,7 @@ pub fn poll(io: std.Io) !bool {
             .software_interrupt => exec.execSoftwareInterrupt(&registers),
             .single_data_transfer => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
             .single_data_swap => |i| exec.execSingleDataSwap(i, &registers, &memory_map),
+            .h_and_s_data_transfer => |i| exec.execHAndSDataTransfer(i, &registers, &memory_map),
         };
 
     // PC may have been updated by instruction so we use the latest value

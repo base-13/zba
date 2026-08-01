@@ -507,3 +507,69 @@ pub fn execSingleDataSwap(
         memory_map.write(addr, new_value);
     }
 }
+
+pub fn execHAndSDataTransfer(
+    instr: is.HAndSDataTransferInstr,
+    registers: *cpu_state.Reigsters,
+    memory_map: *memory.MemoryMap,
+) void {
+    const rn_content = registers.get(instr.rn);
+    var address: u32 = undefined;
+    var modified_base: u32 = undefined;
+    var offset: u32 = undefined;
+    const transfer_byte = instr.sh & 1 == 0;
+    const transfer_signed = instr.sh >> 1 == 1;
+
+    if (instr.imm_flag)
+        offset = instr.op2.offset
+    else
+        offset = registers.get(instr.op2.rm);
+
+    if (instr.add_offset)
+        modified_base = rn_content +% offset
+    else
+        modified_base = rn_content -% offset;
+
+    if (instr.pre_index) {
+        address = modified_base;
+
+        if (instr.write_back)
+            registers.set(instr.rn, modified_base);
+    } else {
+        address = rn_content;
+        registers.set(instr.rn, modified_base);
+    }
+
+    if (instr.load) {
+        const m_value = memory_map.read(address);
+
+        if (transfer_signed) {
+            var value: i32 = undefined;
+
+            if (transfer_byte)
+                value = @as(i8, @bitCast(@as(u8, @truncate(m_value))))
+            else
+                value = @as(i16, @bitCast(@as(u16, @truncate(m_value))));
+
+            registers.set(instr.rd, @bitCast(value));
+        } else {
+            var value: u32 = undefined;
+
+            if (transfer_byte)
+                value = m_value & 0xFF
+            else
+                value = m_value & 0xFFFF;
+
+            registers.set(instr.rd, value);
+        }
+    } else {
+        const r_value = registers.get(instr.rd);
+        const old_value = memory_map.read(address);
+
+        if (transfer_byte) {
+            memory_map.write(address, (old_value & 0xFFFF_FF00) | (r_value & 0xFF));
+        } else {
+            memory_map.write(address, (old_value & 0xFFFF_0000) | (r_value & 0xFFFF));
+        }
+    }
+}

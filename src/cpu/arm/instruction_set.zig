@@ -41,6 +41,11 @@ pub const OffsetOperand = struct {
         },
         imm_operand: u12,
     };
+
+    pub const HAndSDataTransferOperand = union(enum) {
+        rm: u4,
+        offset: u8,
+    };
 };
 
 pub const DataProcInstrOpcode = enum(u4) {
@@ -131,6 +136,18 @@ pub const SingleDataSwapInstr = struct {
     rm: u4,
 };
 
+pub const HAndSDataTransferInstr = struct {
+    pre_index: bool,
+    add_offset: bool,
+    imm_flag: bool,
+    write_back: bool,
+    load: bool,
+    rn: u4,
+    rd: u4,
+    sh: u2,
+    op2: OffsetOperand.HAndSDataTransferOperand,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -140,6 +157,7 @@ pub const Fields = union(enum) {
     software_interrupt: SoftwareInterruptInstr,
     single_data_transfer: SingleDataTransferInstr,
     single_data_swap: SingleDataSwapInstr,
+    h_and_s_data_transfer: HAndSDataTransferInstr,
 };
 
 pub const Instr = struct {

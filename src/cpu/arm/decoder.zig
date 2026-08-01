@@ -220,6 +220,33 @@ fn decodeSingleDataTransferInstr(instr: u32) InstrDecodeError!is.SingleDataTrans
     };
 }
 
+fn decodeHAndSDataTransferInstr(instr: u32) InstrDecodeError!is.HAndSDataTransferInstr {
+    const imm_flag = getNBits(instr, 22, 1, u1) == 1;
+    var op2: is.OffsetOperand.HAndSDataTransferOperand = undefined;
+
+    if (imm_flag) {
+        const offset = (getNBits(instr, 8, 4, u8) << 4) | getNBits(instr, 0, 4, u4);
+        op2 = .{ .offset = offset };
+    } else {
+        op2 = .{ .rm = getNBits(instr, 0, 4, u4) };
+    }
+
+    const sh = getNBits(instr, 5, 2, u2);
+    if (sh == 0b00) return InstrDecodeError.InvalidInstruction;
+
+    return .{
+        .pre_index = getNBits(instr, 24, 1, u1) == 1,
+        .add_offset = getNBits(instr, 23, 1, u1) == 1,
+        .imm_flag = imm_flag,
+        .write_back = getNBits(instr, 21, 1, u1) == 1,
+        .load = getNBits(instr, 20, 1, u1) == 1,
+        .rn = getNBits(instr, 16, 4, u4),
+        .rd = getNBits(instr, 12, 4, u4),
+        .sh = sh,
+        .op2 = op2,
+    };
+}
+
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -255,6 +282,9 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const software_interrupt_bitmask = 0b0000_1111_000000000000000000000000;
     const software_interrupt_test = 0b0000_1111_000000000000000000000000;
 
+    const h_and_s_data_transfer_bitmask = 0b0000_111_00000000000000000_1_00_1_0000;
+    const h_and_s_data_transfer_test = 0b0000_000_00000000000000000_1_00_1_0000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         fields = .{ .software_interrupt = .{} }
     else if (instr & multiply_bitmask == multiply_test)
@@ -263,6 +293,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
         fields = .{ .multiply_long = decodeMultiplyLongInstr(instr) }
     else if (instr & single_data_swap_bitmask == single_data_swap_test)
         fields = .{ .single_data_swap = decodeSingleDataSwapInstr(instr) }
+    else if (instr & h_and_s_data_transfer_bitmask == h_and_s_data_transfer_test)
+        fields = .{ .h_and_s_data_transfer = try decodeHAndSDataTransferInstr(instr) }
     else if (checkPSRTransferInstr(instr))
         fields = .{ .psr_transfer = try decodePSRTransferInstr(instr) }
     else if (instr & data_proc_bitmask == data_proc_test)
