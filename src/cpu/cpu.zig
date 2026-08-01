@@ -72,8 +72,10 @@ pub fn poll(io: std.Io) !bool {
         .h_and_s_data_transfer => std.debug.print("{} op2={}\n", .{ instr, instr.fields.h_and_s_data_transfer.op2 }),
     }
 
+    var instr_updated_pc = false;
+
     if (exec.checkCondition(instr, &registers))
-        switch (instr.fields) {
+        instr_updated_pc = switch (instr.fields) {
             .data_proc => |i| exec.execDataProc(i, &registers),
             .branch_with_link => |i| exec.execBranchWithLink(i, &registers),
             .multiply => |i| exec.execMultiply(i, &registers),
@@ -85,8 +87,8 @@ pub fn poll(io: std.Io) !bool {
             .h_and_s_data_transfer => |i| exec.execHAndSDataTransfer(i, &registers, &memory_map),
         };
 
-    // PC may have been updated by instruction so we use the latest value
-    registers.setPC(registers.getPC() + 4);
+    if (!instr_updated_pc)
+        registers.setPC(pc + 4);
 
     return true;
 }
