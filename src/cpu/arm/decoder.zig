@@ -247,6 +247,23 @@ fn decodeHAndSDataTransferInstr(instr: u32) InstrDecodeError!is.HAndSDataTransfe
     };
 }
 
+fn decodeBlockDataTransferInstr(instr: u32) is.BlockDataTransferInstr {
+    var r_list: [16]bool = undefined;
+
+    for (0..16) |i|
+        r_list[i] = getNBits(instr, @intCast(i), 1, u1) == 1;
+
+    return .{
+        .pre_index = getNBits(instr, 24, 1, u1) == 1,
+        .add_offset = getNBits(instr, 23, 1, u1) == 1,
+        .force_user = getNBits(instr, 22, 1, u1) == 1,
+        .write_back = getNBits(instr, 21, 1, u1) == 1,
+        .load = getNBits(instr, 20, 1, u1) == 1,
+        .rn = getNBits(instr, 16, 4, u4),
+        .r_list = r_list,
+    };
+}
+
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -279,6 +296,9 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const branch_with_link_bitmask = 0b0000_111_0000000000000000000000000;
     const branch_with_link_test = 0b0000_101_0000000000000000000000000;
 
+    const block_data_transfer_bitmask = 0b0000_111_0000000000000000000000000;
+    const block_data_transfer_test = 0b0000_100_0000000000000000000000000;
+
     const software_interrupt_bitmask = 0b0000_1111_000000000000000000000000;
     const software_interrupt_test = 0b0000_1111_000000000000000000000000;
 
@@ -303,6 +323,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
         fields = .{ .single_data_transfer = try decodeSingleDataTransferInstr(instr) }
     else if (instr & branch_with_link_bitmask == branch_with_link_test)
         fields = .{ .branch_with_link = decodeBranchWithLinkInstr(instr) }
+    else if (instr & block_data_transfer_bitmask == block_data_transfer_test)
+        fields = .{ .block_data_transfer = decodeBlockDataTransferInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

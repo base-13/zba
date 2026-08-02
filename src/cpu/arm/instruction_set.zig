@@ -148,6 +148,16 @@ pub const HAndSDataTransferInstr = struct {
     op2: OffsetOperand.HAndSDataTransferOperand,
 };
 
+pub const BlockDataTransferInstr = struct {
+    pre_index: bool,
+    add_offset: bool,
+    force_user: bool,
+    write_back: bool,
+    load: bool,
+    rn: u4,
+    r_list: [16]bool,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -158,6 +168,7 @@ pub const Fields = union(enum) {
     single_data_transfer: SingleDataTransferInstr,
     single_data_swap: SingleDataSwapInstr,
     h_and_s_data_transfer: HAndSDataTransferInstr,
+    block_data_transfer: BlockDataTransferInstr,
 };
 
 pub const Instr = struct {
