@@ -55,7 +55,21 @@ pub fn poll(io: std.Io) !bool {
         return false;
     }
 
-    const instr = try getInstr(pc);
+    const instr = getInstr(pc) catch {
+        registers.setPC(4); // UND Exception vector
+
+        registers.und.spsr = registers.cpsr;
+        // store addr of next instruction to LR_und
+        if (registers.cpsr.thumb_state)
+            registers.und.r13_14[1] = pc + 2
+        else
+            registers.und.r13_14[1] = pc + 4;
+
+        registers.cpsr.irq_disable = true;
+        registers.cpsr.thumb_state = false;
+
+        return true;
+    };
 
     switch (instr.fields) {
         .data_proc => std.debug.print("{} op2={}\n", .{ instr, instr.fields.data_proc.op2 }),
