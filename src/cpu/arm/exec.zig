@@ -679,3 +679,12 @@ pub fn execBlockDataTransfer(
 
     return pc_used and instr.load;
 }
+
+pub fn execBranchAndExchange(instr: is.BranchAndExchangeInstr, registers: *cpu_state.Reigsters) bool {
+    const rn_content = registers.get(instr.rn);
+
+    registers.setPC(rn_content & ~1);
+    registers.cpsr.thumb_state = rn_content & 1 == 1;
+
+    return true;
+}

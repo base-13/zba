@@ -158,6 +158,8 @@ pub const BlockDataTransferInstr = struct {
     r_list: [16]bool,
 };
 
+pub const BranchAndExchangeInstr = struct { rn: u4 };
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -169,6 +171,7 @@ pub const Fields = union(enum) {
     single_data_swap: SingleDataSwapInstr,
     h_and_s_data_transfer: HAndSDataTransferInstr,
     block_data_transfer: BlockDataTransferInstr,
+    branch_and_exchange: BranchAndExchangeInstr,
 };
 
 pub const Instr = struct {

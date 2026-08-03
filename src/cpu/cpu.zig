@@ -85,6 +85,7 @@ pub fn poll(io: std.Io) !bool {
         .single_data_swap => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.single_data_swap }),
         .h_and_s_data_transfer => std.debug.print("{} op2={}\n", .{ instr, instr.fields.h_and_s_data_transfer.op2 }),
         .block_data_transfer => std.debug.print("{} {}\n", .{ instr.cond, instr.fields }),
+        .branch_and_exchange => std.debug.print("{}\n", .{instr}),
     }
 
     var instr_updated_pc = false;
@@ -101,6 +102,7 @@ pub fn poll(io: std.Io) !bool {
             .single_data_swap => |i| exec.execSingleDataSwap(i, &registers, &memory_map),
             .h_and_s_data_transfer => |i| exec.execHAndSDataTransfer(i, &registers, &memory_map),
             .block_data_transfer => |i| exec.execBlockDataTransfer(i, &registers, &memory_map),
+            .branch_and_exchange => |i| exec.execBranchAndExchange(i, &registers),
         };
 
     if (!instr_updated_pc)

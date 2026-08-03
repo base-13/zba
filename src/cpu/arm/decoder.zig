@@ -264,6 +264,10 @@ fn decodeBlockDataTransferInstr(instr: u32) is.BlockDataTransferInstr {
     };
 }
 
+fn decodeBranchAndExchange(instr: u32) is.BranchAndExchangeInstr {
+    return .{ .rn = getNBits(instr, 0, 4, u4) };
+}
+
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -296,6 +300,9 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     const branch_with_link_bitmask = 0b0000_111_0000000000000000000000000;
     const branch_with_link_test = 0b0000_101_0000000000000000000000000;
 
+    const branch_with_exchange_bitmask = 0b0000_111111111111111111111111_0000;
+    const branch_with_exchange_test = 0b0000_000100101111111111110001_0000;
+
     const block_data_transfer_bitmask = 0b0000_111_0000000000000000000000000;
     const block_data_transfer_test = 0b0000_100_0000000000000000000000000;
 
@@ -307,6 +314,8 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
 
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         fields = .{ .software_interrupt = .{} }
+    else if (instr & branch_with_exchange_bitmask == branch_with_exchange_test)
+        fields = .{ .branch_and_exchange = decodeBranchAndExchange(instr) }
     else if (instr & multiply_bitmask == multiply_test)
         fields = .{ .multiply = decodeMultiplyInstr(instr) }
     else if (instr & multiply_long_bitmask == multiply_long_test)
