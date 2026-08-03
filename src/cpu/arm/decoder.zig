@@ -265,7 +265,11 @@ fn decodeBlockDataTransferInstr(instr: u32) is.BlockDataTransferInstr {
 }
 
 fn decodeBranchAndExchange(instr: u32) is.BranchAndExchangeInstr {
-    return .{ .rn = getNBits(instr, 0, 4, u4) };
+    const rn = getNBits(instr, 0, 4, u4);
+
+    if (rn == 15) log.warn("Invalid registers: R15 can't be used", .{});
+
+    return .{ .rn = rn };
 }
 
 fn checkCoprocessorInstr(instr: u32) bool {

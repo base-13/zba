@@ -683,7 +683,7 @@ pub fn execBlockDataTransfer(
 pub fn execBranchAndExchange(instr: is.BranchAndExchangeInstr, registers: *cpu_state.Reigsters) bool {
     const rn_content = registers.get(instr.rn);
 
-    registers.setPC(rn_content & ~1);
+    registers.setPC(rn_content & 0xFFFF_FFFE);
     registers.cpsr.thumb_state = rn_content & 1 == 1;
 
     return true;
