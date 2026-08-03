@@ -268,6 +268,16 @@ fn decodeBranchAndExchange(instr: u32) is.BranchAndExchangeInstr {
     return .{ .rn = getNBits(instr, 0, 4, u4) };
 }
 
+fn checkCoprocessorInstr(instr: u32) bool {
+    const cop_bitmask1 = 0b0000_111_0000000000000000000000000;
+    const cop_test1 = 0b0000_110_0000000000000000000000000;
+
+    const cop_bitmask2 = 0b0000_1111_000000000000000000000000;
+    const cop_test2 = 0b0000_1110_000000000000000000000000;
+
+    return (instr & cop_bitmask1 == cop_test1) or (instr & cop_bitmask2 == cop_test2);
+}
+
 fn checkPSRTransferInstr(instr: u32) bool {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
@@ -334,8 +344,10 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
         fields = .{ .branch_with_link = decodeBranchWithLinkInstr(instr) }
     else if (instr & block_data_transfer_bitmask == block_data_transfer_test)
         fields = .{ .block_data_transfer = decodeBlockDataTransferInstr(instr) }
-    else
-        return InstrDecodeError.InvalidInstruction;
+    else if (checkCoprocessorInstr(instr)) {
+        fields = .{ .coprocessor_instr = .{} };
+        log.err("Coprocessor instructions are not implemented", .{});
+    } else return InstrDecodeError.InvalidInstruction;
 
     return .{
         .cond = cond,

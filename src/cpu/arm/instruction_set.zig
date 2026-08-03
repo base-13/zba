@@ -160,6 +160,8 @@ pub const BlockDataTransferInstr = struct {
 
 pub const BranchAndExchangeInstr = struct { rn: u4 };
 
+pub const CoprocessorInstr = struct {};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -172,6 +174,7 @@ pub const Fields = union(enum) {
     h_and_s_data_transfer: HAndSDataTransferInstr,
     block_data_transfer: BlockDataTransferInstr,
     branch_and_exchange: BranchAndExchangeInstr,
+    coprocessor_instr: CoprocessorInstr,
 };
 
 pub const Instr = struct {
