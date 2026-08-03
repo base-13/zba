@@ -29,7 +29,7 @@ pub fn setBIOS(bios: []u8) void {
 pub fn poll(io: std.Io) !bool {
     const pc = registers.getPC();
 
-    if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the last instruction
+    if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the end of ROM
         std.debug.print("\n\nPC: {} GPRs: ", .{registers.getPC()});
         for (0..16) |i|
             std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
@@ -86,7 +86,7 @@ pub fn poll(io: std.Io) !bool {
             .single_data_transfer => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
             .single_data_swap => |i| exec.execSingleDataSwap(i, &registers, &memory_map),
             .h_and_s_data_transfer => |i| exec.execHAndSDataTransfer(i, &registers, &memory_map),
-            .block_data_transfer => false,
+            .block_data_transfer => |i| exec.execBlockDataTransfer(i, &registers, &memory_map),
         };
 
     if (!instr_updated_pc)

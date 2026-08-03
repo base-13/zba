@@ -414,7 +414,7 @@ pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigste
 
             registers.set(mrs.rd, psr);
 
-            return true;
+            return mrs.rd == 15;
         },
         .msr => |msr| {
             var op: u32 = undefined;
@@ -592,4 +592,90 @@ pub fn execHAndSDataTransfer(
     }
 
     return instr.rd == 15;
+}
+
+pub fn execBlockDataTransfer(
+    instr: is.BlockDataTransferInstr,
+    registers: *cpu_state.Reigsters,
+    memory_map: *memory.MemoryMap,
+) bool {
+    var n: u4 = 0;
+
+    for (instr.r_list) |r_enabled| {
+        if (r_enabled) n += 1;
+    }
+
+    const rn_content = registers.get(instr.rn);
+    const current_mode = registers.cpsr.mode;
+    const pc_used = instr.r_list[15];
+    const use_user_regs = pc_used and instr.force_user;
+    var address: u32 = undefined;
+
+    if (instr.add_offset) {
+        if (instr.pre_index)
+            address = rn_content +% 4
+        else
+            address = rn_content;
+    } else {
+        if (instr.pre_index)
+            address = rn_content -% (4 * n)
+        else
+            address = rn_content -% (4 * (n -% 1));
+    }
+
+    if (instr.force_user and current_mode == .User)
+        log.err("S bit set in User mode", .{});
+
+    for (instr.r_list, 0..) |r_enabled, r| {
+        if (r_enabled) {
+            if (instr.load) {
+                const value = memory_map.read(address);
+                if (r == 15) {
+                    registers.setPC(value);
+                } else {
+                    if (use_user_regs)
+                        registers.r[r] = value
+                    else
+                        registers.set(@intCast(r), value);
+                }
+            } else {
+                if (r == 15) {
+                    memory_map.write(address, registers.getPC() + 12);
+
+                    if (instr.force_user) {
+                        switch (current_mode) {
+                            .Abort => registers.cpsr = registers.abt.spsr,
+                            .FIQ => registers.cpsr = registers.fiq.spsr,
+                            .IRQ => registers.cpsr = registers.irq.spsr,
+                            .Supervisor => registers.cpsr = registers.svc.spsr,
+                            .Undefined => registers.cpsr = registers.und.spsr,
+                            else => log.err("Attempted to access SPSR in {}", .{current_mode}),
+                        }
+                    }
+                } else {
+                    var value: u32 = undefined;
+
+                    if (r == 15)
+                        value = registers.get(15)
+                    else if (use_user_regs)
+                        value = registers.r[r]
+                    else
+                        value = registers.get(@intCast(r));
+
+                    memory_map.write(address, value);
+                }
+            }
+
+            address += 4;
+        }
+    }
+
+    if (instr.write_back) {
+        if (instr.add_offset)
+            registers.set(instr.rn, rn_content +% (4 * n))
+        else
+            registers.set(instr.rn, rn_content -% (4 * n));
+    }
+
+    return pc_used and instr.load;
 }
