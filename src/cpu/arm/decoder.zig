@@ -1,5 +1,5 @@
 const std = @import("std");
-const is = @import("instruction_set.zig");
+const is = @import("../instruction_set.zig");
 
 const log = std.log.scoped(.decoder);
 
@@ -7,23 +7,21 @@ fn getNBits(instr: u32, start: u5, n: u5, T: type) T {
     return @intCast((instr >> start) & ((@as(u32, 1) << n) - 1));
 }
 
-pub const InstrDecodeError = error{InvalidInstruction};
-
-fn decodeCondition(instr: u32) InstrDecodeError!is.Condition {
+fn decodeCondition(instr: u32) is.InstrDecodeError!is.Condition {
     const cond = getNBits(instr, 28, 4, u4);
 
-    if (cond == 0b1111) return InstrDecodeError.InvalidInstruction;
+    if (cond == 0b1111) return is.InstrDecodeError.InvalidInstruction;
 
     return @enumFromInt(cond);
 }
 
-fn decodeRegOffset(offset: u12) InstrDecodeError!is.OffsetOperand.Operand {
+fn decodeRegOffset(offset: u12) is.InstrDecodeError!is.OffsetOperand.Operand {
     var op2: is.OffsetOperand.Operand = undefined;
 
     var shift: is.OffsetOperand.RegOffsetShift = undefined;
 
     if (getNBits(offset, 4, 1, u1) == 1) {
-        if (getNBits(offset, 7, 1, u1) != 0) return InstrDecodeError.InvalidInstruction;
+        if (getNBits(offset, 7, 1, u1) != 0) return is.InstrDecodeError.InvalidInstruction;
 
         shift = .{ .rs = getNBits(offset, 8, 4, u4) };
     } else {
@@ -41,7 +39,7 @@ fn decodeRegOffset(offset: u12) InstrDecodeError!is.OffsetOperand.Operand {
     return op2;
 }
 
-fn decodeDataProcInstr(instr: u32) InstrDecodeError!is.DataProcInstr {
+fn decodeDataProcInstr(instr: u32) is.InstrDecodeError!is.DataProcInstr {
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
     var op2: is.OffsetOperand.Operand = undefined;
 
@@ -122,7 +120,7 @@ fn decodeMultiplyLongInstr(instr: u32) is.MultiplyLongInstr {
     };
 }
 
-fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
+fn decodePSRTransferInstr(instr: u32) is.InstrDecodeError!is.PSRTransferInstr {
     const mrs_bitmask = 0b0000_11111_0_111111_0000_111111111111;
     const mrs_test = 0b0000_00010_0_001111_0000_000000000000;
 
@@ -162,7 +160,7 @@ fn decodePSRTransferInstr(instr: u32) InstrDecodeError!is.PSRTransferInstr {
             }
         else {
             if (getNBits(instr, 4, 8, u8) != 0)
-                return InstrDecodeError.InvalidInstruction;
+                return is.InstrDecodeError.InvalidInstruction;
 
             const rm = getNBits(instr, 0, 4, u4);
             if (rm == 15) log.warn("Invalid registers: R15 can't be used", .{});
@@ -198,7 +196,7 @@ fn decodeSingleDataSwapInstr(instr: u32) is.SingleDataSwapInstr {
     };
 }
 
-fn decodeSingleDataTransferInstr(instr: u32) InstrDecodeError!is.SingleDataTransferInstr {
+fn decodeSingleDataTransferInstr(instr: u32) is.InstrDecodeError!is.SingleDataTransferInstr {
     const imm_flag = getNBits(instr, 25, 1, u1) == 1;
     var op2: is.OffsetOperand.Operand = undefined;
 
@@ -220,7 +218,7 @@ fn decodeSingleDataTransferInstr(instr: u32) InstrDecodeError!is.SingleDataTrans
     };
 }
 
-fn decodeHAndSDataTransferInstr(instr: u32) InstrDecodeError!is.HAndSDataTransferInstr {
+fn decodeHAndSDataTransferInstr(instr: u32) is.InstrDecodeError!is.HAndSDataTransferInstr {
     const imm_flag = getNBits(instr, 22, 1, u1) == 1;
     var op2: is.OffsetOperand.HAndSDataTransferOperand = undefined;
 
@@ -232,7 +230,7 @@ fn decodeHAndSDataTransferInstr(instr: u32) InstrDecodeError!is.HAndSDataTransfe
     }
 
     const sh = getNBits(instr, 5, 2, u2);
-    if (sh == 0b00) return InstrDecodeError.InvalidInstruction;
+    if (sh == 0b00) return is.InstrDecodeError.InvalidInstruction;
 
     return .{
         .pre_index = getNBits(instr, 24, 1, u1) == 1,
@@ -292,7 +290,7 @@ fn checkPSRTransferInstr(instr: u32) bool {
     return (instr & mrs_bitmask == mrs_test) or (instr & msr_bitmask == msr_test);
 }
 
-pub fn decode(instr: u32) InstrDecodeError!is.Instr {
+pub fn decode(instr: u32) is.InstrDecodeError!is.ARMInstr {
     const cond = try decodeCondition(instr);
     var fields: is.Fields = undefined;
 
@@ -351,7 +349,7 @@ pub fn decode(instr: u32) InstrDecodeError!is.Instr {
     else if (checkCoprocessorInstr(instr)) {
         fields = .{ .coprocessor_instr = .{} };
         log.err("Coprocessor instructions are not implemented", .{});
-    } else return InstrDecodeError.InvalidInstruction;
+    } else return is.InstrDecodeError.InvalidInstruction;
 
     return .{
         .cond = cond,

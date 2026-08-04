@@ -1,5 +1,5 @@
 const std = @import("std");
-const is = @import("instruction_set.zig");
+const is = @import("../instruction_set.zig");
 const cpu_state = @import("../cpu_state.zig");
 const memory = @import("../../memory.zig");
 
@@ -13,7 +13,7 @@ fn rotateRight(x: u32, n: u32) u32 {
     return (x >> shift) | (x << inv);
 }
 
-pub fn checkCondition(instr: is.Instr, registers: *cpu_state.Reigsters) bool {
+pub fn checkCondition(instr: is.ARMInstr, registers: *cpu_state.Reigsters) bool {
     const zero = registers.cpsr.zero_flag;
     const carry = registers.cpsr.carry_flag;
     const neg = registers.cpsr.neg_flag;
@@ -484,7 +484,7 @@ pub fn execSingleDataTransfer(
     }
 
     if (instr.load) {
-        const value = memory_map.read(address);
+        const value = memory_map.read(address, .Word);
 
         if (instr.transfer_byte)
             registers.set(instr.rd, value & 0xFF)
@@ -494,11 +494,11 @@ pub fn execSingleDataTransfer(
         const value = registers.get(instr.rd);
 
         if (instr.transfer_byte) {
-            const old_value = memory_map.read(address);
+            const old_value = memory_map.read(address, .Word);
 
-            memory_map.write(address, (old_value & 0xFFFF_FF00) | (value & 0xFF));
+            memory_map.write(address, (old_value & 0xFFFF_FF00) | (value & 0xFF), .Word);
         } else {
-            memory_map.write(address, value);
+            memory_map.write(address, value, .Word);
         }
     }
 
@@ -512,15 +512,15 @@ pub fn execSingleDataSwap(
 ) bool {
     const addr = registers.get(instr.rn);
 
-    const old_value = memory_map.read(addr);
+    const old_value = memory_map.read(addr, .Word);
     const new_value = registers.get(instr.rm);
 
     if (instr.swap_byte) {
         registers.set(instr.rd, old_value & 0xFF);
-        memory_map.write(addr, (old_value & 0xFFFF_FF00) | (new_value & 0xFF));
+        memory_map.write(addr, (old_value & 0xFFFF_FF00) | (new_value & 0xFF), .Word);
     } else {
         registers.set(instr.rd, old_value);
-        memory_map.write(addr, new_value);
+        memory_map.write(addr, new_value, .Word);
     }
 
     return instr.rd == 15;
@@ -559,7 +559,7 @@ pub fn execHAndSDataTransfer(
     }
 
     if (instr.load) {
-        const m_value = memory_map.read(address);
+        const m_value = memory_map.read(address, .Word);
 
         if (transfer_signed) {
             var value: i32 = undefined;
@@ -582,12 +582,12 @@ pub fn execHAndSDataTransfer(
         }
     } else {
         const r_value = registers.get(instr.rd);
-        const old_value = memory_map.read(address);
+        const old_value = memory_map.read(address, .Word);
 
         if (transfer_byte) {
-            memory_map.write(address, (old_value & 0xFFFF_FF00) | (r_value & 0xFF));
+            memory_map.write(address, (old_value & 0xFFFF_FF00) | (r_value & 0xFF), .Word);
         } else {
-            memory_map.write(address, (old_value & 0xFFFF_0000) | (r_value & 0xFFFF));
+            memory_map.write(address, (old_value & 0xFFFF_0000) | (r_value & 0xFFFF), .Word);
         }
     }
 
@@ -629,7 +629,7 @@ pub fn execBlockDataTransfer(
     for (instr.r_list, 0..) |r_enabled, r| {
         if (r_enabled) {
             if (instr.load) {
-                const value = memory_map.read(address);
+                const value = memory_map.read(address, .Word);
                 if (r == 15) {
                     registers.setPC(value);
                 } else {
@@ -640,7 +640,7 @@ pub fn execBlockDataTransfer(
                 }
             } else {
                 if (r == 15) {
-                    memory_map.write(address, registers.getPC() + 12);
+                    memory_map.write(address, registers.getPC() + 12, .Word);
 
                     if (instr.force_user) {
                         switch (current_mode) {
@@ -662,7 +662,7 @@ pub fn execBlockDataTransfer(
                     else
                         value = registers.get(@intCast(r));
 
-                    memory_map.write(address, value);
+                    memory_map.write(address, value, .Word);
                 }
             }
 

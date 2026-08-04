@@ -177,7 +177,16 @@ pub const Fields = union(enum) {
     coprocessor_instr: CoprocessorInstr,
 };
 
-pub const Instr = struct {
+pub const InstrDecodeError = error{InvalidInstruction};
+
+pub const ARMInstr = struct {
     cond: Condition,
     fields: Fields,
+};
+
+pub const ThumbInstr = struct {};
+
+pub const Instr = union(enum) {
+    thumb: ThumbInstr,
+    arm: ARMInstr,
 };

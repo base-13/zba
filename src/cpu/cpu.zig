@@ -1,16 +1,20 @@
 const std = @import("std");
-const is = @import("arm/instruction_set.zig");
+const is = @import("instruction_set.zig");
 const cpu_state = @import("cpu_state.zig");
-const decoder = @import("arm/decoder.zig");
-const exec = @import("arm/exec.zig");
+const decoder_arm = @import("arm/decoder.zig");
+const decoder_thumb = @import("thumb/decoder.zig");
+const exec_arm = @import("arm/exec.zig");
+const exec_thumb = @import("thumb/exec.zig");
 const memory = @import("../memory.zig");
 
 var registers = cpu_state.Reigsters{};
 
-fn getInstr(pc: u32) decoder.InstrDecodeError!is.Instr {
-    const instr = memory_map.read(pc);
-
-    return decoder.decode(instr);
+fn getInstr(pc: u32) is.InstrDecodeError!is.Instr {
+    if (registers.cpsr.thumb_state) {
+        return .{ .thumb = try decoder_thumb.decode(memory_map.read(pc, .HalfWord)) };
+    } else {
+        return .{ .arm = try decoder_arm.decode(memory_map.read(pc, .Word)) };
+    }
 }
 
 var memory_map: memory.MemoryMap = .{};
@@ -71,41 +75,74 @@ pub fn poll(io: std.Io) !bool {
         return true;
     };
 
-    switch (instr.fields) {
-        .data_proc => std.debug.print("{} op2={}\n", .{ instr, instr.fields.data_proc.op2 }),
-        .branch_with_link => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.branch_with_link }),
-        .multiply => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply }),
-        .multiply_long => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.multiply_long }),
-        .psr_transfer => std.debug.print("{} {}\n", .{ instr, instr.fields.psr_transfer.type }),
-        .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
-        .single_data_transfer => std.debug.print("{} op2={}\n", .{
-            instr,
-            instr.fields.single_data_transfer.op2,
-        }),
-        .single_data_swap => std.debug.print("{} {}\n", .{ instr.cond, instr.fields.single_data_swap }),
-        .h_and_s_data_transfer => std.debug.print("{} op2={}\n", .{ instr, instr.fields.h_and_s_data_transfer.op2 }),
-        .block_data_transfer => std.debug.print("{} {}\n", .{ instr.cond, instr.fields }),
-        .branch_and_exchange => std.debug.print("{}\n", .{instr}),
-        .coprocessor_instr => std.debug.print("Coprocessor Instruction\n", .{}),
+    switch (instr) {
+        .arm => |arm_instr| switch (arm_instr.fields) {
+            .data_proc => std.debug.print("{} op2={}\n", .{ arm_instr, arm_instr.fields.data_proc.op2 }),
+            .branch_with_link => std.debug.print("{} {}\n", .{ arm_instr.cond, arm_instr.fields.branch_with_link }),
+            .multiply => std.debug.print("{} {}\n", .{ arm_instr.cond, arm_instr.fields.multiply }),
+            .multiply_long => std.debug.print("{} {}\n", .{ arm_instr.cond, arm_instr.fields.multiply_long }),
+            .psr_transfer => std.debug.print("{} {}\n", .{ arm_instr, arm_instr.fields.psr_transfer.type }),
+            .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
+            .single_data_transfer => std.debug.print("{} op2={}\n", .{
+                arm_instr,
+                arm_instr.fields.single_data_transfer.op2,
+            }),
+            .single_data_swap => std.debug.print("{} {}\n", .{ arm_instr.cond, arm_instr.fields.single_data_swap }),
+            .h_and_s_data_transfer => std.debug.print("{} op2={}\n", .{
+                arm_instr,
+                arm_instr.fields.h_and_s_data_transfer.op2,
+            }),
+            .block_data_transfer => std.debug.print("{} {}\n", .{ arm_instr.cond, arm_instr.fields }),
+            .branch_and_exchange => std.debug.print("{}\n", .{arm_instr}),
+            .coprocessor_instr => std.debug.print("Coprocessor Instruction\n", .{}),
+        },
+        .thumb => |thumb_instr| {
+            _ = thumb_instr;
+        },
     }
 
     var instr_updated_pc = false;
 
-    if (exec.checkCondition(instr, &registers))
-        instr_updated_pc = switch (instr.fields) {
-            .data_proc => |i| exec.execDataProc(i, &registers),
-            .branch_with_link => |i| exec.execBranchWithLink(i, &registers),
-            .multiply => |i| exec.execMultiply(i, &registers),
-            .multiply_long => |i| exec.execMultiplyLong(i, &registers),
-            .psr_transfer => |i| exec.execPSRTransfer(i, &registers),
-            .software_interrupt => exec.execSoftwareInterrupt(&registers),
-            .single_data_transfer => |i| exec.execSingleDataTransfer(i, &registers, &memory_map),
-            .single_data_swap => |i| exec.execSingleDataSwap(i, &registers, &memory_map),
-            .h_and_s_data_transfer => |i| exec.execHAndSDataTransfer(i, &registers, &memory_map),
-            .block_data_transfer => |i| exec.execBlockDataTransfer(i, &registers, &memory_map),
-            .branch_and_exchange => |i| exec.execBranchAndExchange(i, &registers),
-            .coprocessor_instr => false,
-        };
+    switch (instr) {
+        .arm => |arm_instr| {
+            if (exec_arm.checkCondition(arm_instr, &registers)) {
+                instr_updated_pc =
+                    switch (arm_instr.fields) {
+                        .data_proc => |i| exec_arm.execDataProc(i, &registers),
+                        .branch_with_link => |i| exec_arm.execBranchWithLink(i, &registers),
+                        .multiply => |i| exec_arm.execMultiply(i, &registers),
+                        .multiply_long => |i| exec_arm.execMultiplyLong(i, &registers),
+                        .psr_transfer => |i| exec_arm.execPSRTransfer(i, &registers),
+                        .software_interrupt => exec_arm.execSoftwareInterrupt(&registers),
+                        .single_data_transfer => |i| exec_arm.execSingleDataTransfer(
+                            i,
+                            &registers,
+                            &memory_map,
+                        ),
+                        .single_data_swap => |i| exec_arm.execSingleDataSwap(
+                            i,
+                            &registers,
+                            &memory_map,
+                        ),
+                        .h_and_s_data_transfer => |i| exec_arm.execHAndSDataTransfer(
+                            i,
+                            &registers,
+                            &memory_map,
+                        ),
+                        .block_data_transfer => |i| exec_arm.execBlockDataTransfer(
+                            i,
+                            &registers,
+                            &memory_map,
+                        ),
+                        .branch_and_exchange => |i| exec_arm.execBranchAndExchange(i, &registers),
+                        .coprocessor_instr => false,
+                    };
+            }
+        },
+        .thumb => |thumb_instr| {
+            _ = thumb_instr;
+        },
+    }
 
     if (!instr_updated_pc)
         registers.setPC(pc + 4);

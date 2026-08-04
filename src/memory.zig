@@ -3,12 +3,30 @@ const io = @import("io.zig");
 
 const log = std.log.scoped(.memory);
 
-fn write32(region: []u8, addr: u32, value: u32) void {
-    std.mem.writeInt(u32, region[addr..][0..4], value, .little);
+pub const Length = enum {
+    HalfWord,
+    Word,
+};
+
+fn LengthType(comptime length: Length) type {
+    return switch (length) {
+        .HalfWord => u16,
+        .Word => u32,
+    };
 }
 
-fn read32(region: []u8, addr: u32) u32 {
-    return std.mem.readInt(u32, region[addr..][0..4], .little);
+fn writel(region: []u8, addr: u32, value: u32, comptime length: Length) void {
+    switch (length) {
+        .HalfWord => std.mem.writeInt(u16, region[addr..][0..2], @truncate(value), .little),
+        .Word => std.mem.writeInt(u32, region[addr..][0..4], value, .little),
+    }
+}
+
+fn readl(region: []u8, addr: u32, comptime length: Length) LengthType(length) {
+    return switch (length) {
+        .HalfWord => std.mem.readInt(u16, region[addr..][0..2], .little),
+        .Word => std.mem.readInt(u32, region[addr..][0..4], .little),
+    };
 }
 
 pub const MemoryMap = struct {
@@ -28,42 +46,42 @@ pub const MemoryMap = struct {
 
     io_registers: io.IORegisters = undefined,
 
-    pub fn write(self: *MemoryMap, addr: u32, value: u32) void {
+    pub fn write(self: *MemoryMap, addr: u32, value: u32, comptime length: Length) void {
         switch (addr) {
-            0x02000000...0x0203FFFF => write32(&self.i_wram, addr - 0x02000000, value),
-            0x03000000...0x03007FFF => write32(&self.e_wram, addr - 0x03000000, value),
-            0x04000000...0x040003FE => log.warn("Write to IOR at {x} to be implemented later", .{addr}),
-            0x05000000...0x050001FF => write32(&self.bg_palette, addr - 0x05000000, value),
-            0x05000200...0x050003FF => write32(&self.obj_palette, addr - 0x05000200, value),
-            0x06000000...0x06017FFF => write32(&self.vram, addr - 0x06000000, value),
-            0x07000000...0x070003FF => write32(&self.oam, addr - 0x07000000, value),
-            0x0E000000...0x0E00FFFF => write32(&self.sram, addr - 0x0E000000, value),
+            0x02000000...0x0203FFFF => writel(&self.i_wram, addr - 0x02000000, value, length),
+            0x03000000...0x03007FFF => writel(&self.e_wram, addr - 0x03000000, value, length),
+            0x04000000...0x040003FE => log.warn("write to IOR at {x} to be implemented later", .{addr}),
+            0x05000000...0x050001FF => writel(&self.bg_palette, addr - 0x05000000, value, length),
+            0x05000200...0x050003FF => writel(&self.obj_palette, addr - 0x05000200, value, length),
+            0x06000000...0x06017FFF => writel(&self.vram, addr - 0x06000000, value, length),
+            0x07000000...0x070003FF => writel(&self.oam, addr - 0x07000000, value, length),
+            0x0E000000...0x0E00FFFF => writel(&self.sram, addr - 0x0E000000, value, length),
             else => log.err("Attempted to write illegal memory address {x}", .{addr}),
         }
     }
 
-    pub fn read(self: *MemoryMap, addr: u32) u32 {
-        return read_blk: switch (addr) {
-            0x00000000...0x00003FFF => break :read_blk read32(&self.bios, addr),
-            0x02000000...0x0203FFFF => break :read_blk read32(&self.i_wram, addr - 0x02000000),
-            0x03000000...0x03007FFF => break :read_blk read32(&self.e_wram, addr - 0x03000000),
+    pub fn read(self: *MemoryMap, addr: u32, comptime length: Length) LengthType(length) {
+        return reader_blk: switch (addr) {
+            0x00000000...0x00003FFF => break :reader_blk readl(&self.bios, addr, length),
+            0x02000000...0x0203FFFF => break :reader_blk readl(&self.i_wram, addr - 0x02000000, length),
+            0x03000000...0x03007FFF => break :reader_blk readl(&self.e_wram, addr - 0x03000000, length),
             0x04000000...0x040003FE => {
-                log.warn("Read IOR at {x} to be implemented later", .{addr});
-                break :read_blk 0;
+                log.warn("read IOR at {x} to be implemented later", .{addr});
+                break :reader_blk 0;
             },
-            0x05000000...0x050001FF => break :read_blk read32(&self.bg_palette, addr - 0x05000000),
-            0x05000200...0x050003FF => break :read_blk read32(&self.obj_palette, addr - 0x05000200),
-            0x06000000...0x06017FFF => break :read_blk read32(&self.vram, addr - 0x06000000),
-            0x07000000...0x070003FF => break :read_blk read32(&self.oam, addr - 0x07000000),
+            0x05000000...0x050001FF => break :reader_blk readl(&self.bg_palette, addr - 0x05000000, length),
+            0x05000200...0x050003FF => break :reader_blk readl(&self.obj_palette, addr - 0x05000200, length),
+            0x06000000...0x06017FFF => break :reader_blk readl(&self.vram, addr - 0x06000000, length),
+            0x07000000...0x070003FF => break :reader_blk readl(&self.oam, addr - 0x07000000, length),
             0x08000000...0x0DFFFFFF => {
                 const rom_addr: u32 = @intCast((addr - 0x08000000) % self.rom.len);
 
-                break :read_blk read32(&self.rom, rom_addr);
+                break :reader_blk readl(&self.rom, rom_addr, length);
             },
-            0x0E000000...0x0E00FFFF => break :read_blk read32(&self.sram, addr - 0x0E000000),
+            0x0E000000...0x0E00FFFF => break :reader_blk readl(&self.sram, addr - 0x0E000000, length),
             else => {
                 log.err("Attempted to read illegal memory address {x}", .{addr});
-                break :read_blk 0;
+                break :reader_blk 0;
             },
         };
     }
