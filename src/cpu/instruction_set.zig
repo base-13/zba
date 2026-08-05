@@ -184,7 +184,9 @@ pub const ARMInstr = struct {
     fields: Fields,
 };
 
-pub const ThumbInstr = struct {};
+pub const ThumbInstr = union(enum) {
+    software_interrupt: SoftwareInterruptInstr,
+};
 
 pub const Instr = union(enum) {
     thumb: ThumbInstr,

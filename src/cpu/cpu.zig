@@ -30,6 +30,24 @@ pub fn setBIOS(bios: []u8) void {
     last_instr_addr = @intCast(bios.len);
 }
 
+fn softwareInterrupt() bool {
+    const pc = registers.getPC();
+    registers.setPC(8); // SWI Exception vector
+
+    registers.svc.spsr = registers.cpsr;
+    registers.cpsr.mode = .Supervisor;
+    // store addr of next instruction to LR_svc
+    if (registers.cpsr.thumb_state)
+        registers.set(14, pc + 2)
+    else
+        registers.set(14, pc + 4);
+
+    registers.cpsr.thumb_state = false;
+    registers.cpsr.irq_disable = true;
+
+    return true;
+}
+
 pub fn poll(io: std.Io) !bool {
     const pc = registers.getPC();
 
@@ -63,11 +81,12 @@ pub fn poll(io: std.Io) !bool {
         registers.setPC(4); // UND Exception vector
 
         registers.und.spsr = registers.cpsr;
+        registers.cpsr.mode = .Undefined;
         // store addr of next instruction to LR_und
         if (registers.cpsr.thumb_state)
-            registers.und.r13_14[1] = pc + 2
+            registers.set(14, pc + 2)
         else
-            registers.und.r13_14[1] = pc + 4;
+            registers.set(14, pc + 4);
 
         registers.cpsr.irq_disable = true;
         registers.cpsr.thumb_state = false;
@@ -96,8 +115,8 @@ pub fn poll(io: std.Io) !bool {
             .branch_and_exchange => std.debug.print("{}\n", .{arm_instr}),
             .coprocessor_instr => std.debug.print("Coprocessor Instruction\n", .{}),
         },
-        .thumb => |thumb_instr| {
-            _ = thumb_instr;
+        .thumb => |thumb_instr| switch (thumb_instr) {
+            .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
         },
     }
 
@@ -113,7 +132,7 @@ pub fn poll(io: std.Io) !bool {
                         .multiply => |i| exec_arm.execMultiply(i, &registers),
                         .multiply_long => |i| exec_arm.execMultiplyLong(i, &registers),
                         .psr_transfer => |i| exec_arm.execPSRTransfer(i, &registers),
-                        .software_interrupt => exec_arm.execSoftwareInterrupt(&registers),
+                        .software_interrupt => softwareInterrupt(),
                         .single_data_transfer => |i| exec_arm.execSingleDataTransfer(
                             i,
                             &registers,
@@ -140,7 +159,9 @@ pub fn poll(io: std.Io) !bool {
             }
         },
         .thumb => |thumb_instr| {
-            _ = thumb_instr;
+            instr_updated_pc = switch (thumb_instr) {
+                .software_interrupt => softwareInterrupt(),
+            };
         },
     }
 

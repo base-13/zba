@@ -236,9 +236,9 @@ pub const Reigsters = struct {
                 .Undefined => self.und.r13_14[reg - 13] = value,
                 else => self.r[reg] = value,
             }
+        else if (reg == 15)
+            self.setPC(value)
         else
             self.r[reg] = value;
-
-        if (reg == 15) self.pc = value;
     }
 };
