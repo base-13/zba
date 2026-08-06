@@ -7,7 +7,7 @@ const exec_arm = @import("arm/exec.zig");
 const exec_thumb = @import("thumb/exec.zig");
 const memory = @import("../memory.zig");
 
-var registers = cpu_state.Reigsters{};
+var registers = cpu_state.Registers{};
 
 fn getInstr(pc: u32) is.InstrDecodeError!is.Instr {
     if (registers.cpsr.thumb_state) {

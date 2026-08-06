@@ -13,7 +13,7 @@ fn rotateRight(x: u32, n: u32) u32 {
     return (x >> shift) | (x << inv);
 }
 
-pub fn checkCondition(instr: is.ARMInstr, registers: *cpu_state.Reigsters) bool {
+pub fn checkCondition(instr: is.ARMInstr, registers: *cpu_state.Registers) bool {
     const zero = registers.cpsr.zero_flag;
     const carry = registers.cpsr.carry_flag;
     const neg = registers.cpsr.neg_flag;
@@ -38,7 +38,7 @@ pub fn checkCondition(instr: is.ARMInstr, registers: *cpu_state.Reigsters) bool 
     };
 }
 
-fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Reigsters) struct { u32, ?bool } {
+fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Registers) struct { u32, ?bool } {
     var offset: u32 = undefined;
     var shifter_carry: ?bool = null;
 
@@ -118,7 +118,7 @@ fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state
     return .{ offset, shifter_carry };
 }
 
-pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bool {
     var cpsr = &registers.cpsr;
 
     const rd = instr.rd;
@@ -338,7 +338,7 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Reigsters) bo
     return instr.rd == 15;
 }
 
-pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *cpu_state.Reigsters) bool {
+pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *cpu_state.Registers) bool {
     const current_pc = registers.get(15);
 
     const bit_mask: u32 = ~@as(u32, 0b11);
@@ -351,7 +351,7 @@ pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *cpu_state.Reigst
     return true;
 }
 
-pub fn execMultiply(instr: is.MultiplyInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execMultiply(instr: is.MultiplyInstr, registers: *cpu_state.Registers) bool {
     const rs_content = registers.get(instr.rs);
     const rm_content = registers.get(instr.rm);
     const rn_content = registers.get(instr.rn);
@@ -369,7 +369,7 @@ pub fn execMultiply(instr: is.MultiplyInstr, registers: *cpu_state.Reigsters) bo
     return instr.rd == 15;
 }
 
-pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *cpu_state.Registers) bool {
     const rs_content = registers.get(instr.rs);
     const rm_content = registers.get(instr.rm);
     const rd_high_content: u64 = @intCast(registers.get(instr.rd_high));
@@ -398,7 +398,7 @@ pub fn execMultiplyLong(instr: is.MultiplyLongInstr, registers: *cpu_state.Reigs
     return (instr.rd_high == 15) or (instr.rd_low == 15);
 }
 
-pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Registers) bool {
     if (!instr.cpsr)
         switch (registers.cpsr.mode) {
             .User, .System => |mode| {
@@ -445,7 +445,7 @@ pub fn execPSRTransfer(instr: is.PSRTransferInstr, registers: *cpu_state.Reigste
 
 pub fn execSingleDataTransfer(
     instr: is.SingleDataTransferInstr,
-    registers: *cpu_state.Reigsters,
+    registers: *cpu_state.Registers,
     memory_map: *memory.MemoryMap,
 ) bool {
     const rn_content = registers.get(instr.rn);
@@ -497,7 +497,7 @@ pub fn execSingleDataTransfer(
 
 pub fn execSingleDataSwap(
     instr: is.SingleDataSwapInstr,
-    registers: *cpu_state.Reigsters,
+    registers: *cpu_state.Registers,
     memory_map: *memory.MemoryMap,
 ) bool {
     const addr = registers.get(instr.rn);
@@ -518,7 +518,7 @@ pub fn execSingleDataSwap(
 
 pub fn execHAndSDataTransfer(
     instr: is.HAndSDataTransferInstr,
-    registers: *cpu_state.Reigsters,
+    registers: *cpu_state.Registers,
     memory_map: *memory.MemoryMap,
 ) bool {
     const rn_content = registers.get(instr.rn);
@@ -586,7 +586,7 @@ pub fn execHAndSDataTransfer(
 
 pub fn execBlockDataTransfer(
     instr: is.BlockDataTransferInstr,
-    registers: *cpu_state.Reigsters,
+    registers: *cpu_state.Registers,
     memory_map: *memory.MemoryMap,
 ) bool {
     var n: u4 = 0;
@@ -670,7 +670,7 @@ pub fn execBlockDataTransfer(
     return pc_used and instr.load;
 }
 
-pub fn execBranchAndExchange(instr: is.BranchAndExchangeInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execBranchAndExchange(instr: is.BranchAndExchangeInstr, registers: *cpu_state.Registers) bool {
     const rn_content = registers.get(instr.rn);
 
     registers.setPC(rn_content & 0xFFFF_FFFE);

@@ -10,7 +10,7 @@ pub const CPUMode = enum(u5) {
     System = 0x1F,
 };
 
-pub const Reigsters = struct {
+pub const Registers = struct {
     pub const ProgramStatusReg = struct {
         neg_flag: bool = false,
         zero_flag: bool = false,
@@ -54,7 +54,7 @@ pub const Reigsters = struct {
     } = .{},
 
     pub fn setPSRFromBin(
-        self: *Reigsters,
+        self: *Registers,
         value: u32,
         cpsr: bool,
         set_control_fields: bool,
@@ -143,7 +143,7 @@ pub const Reigsters = struct {
         }
     }
 
-    pub fn getBinFromPSR(self: *Reigsters, cpsr: bool) u32 {
+    pub fn getBinFromPSR(self: *Registers, cpsr: bool) u32 {
         var n: bool = undefined;
         var z: bool = undefined;
         var c: bool = undefined;
@@ -195,16 +195,16 @@ pub const Reigsters = struct {
         return n_bit | z_bit | c_bit | v_bit | i_bit | f_bit | t_bit | mode_bits;
     }
 
-    pub fn getPC(self: *Reigsters) u32 {
+    pub fn getPC(self: *Registers) u32 {
         return self.pc;
     }
 
-    pub fn setPC(self: *Reigsters, value: u32) void {
+    pub fn setPC(self: *Registers, value: u32) void {
         self.pc = value;
         self.r[15] = value;
     }
 
-    pub fn get(self: *Reigsters, reg: u4) u32 {
+    pub fn get(self: *Registers, reg: u4) u32 {
         const mode = self.cpsr.mode;
 
         if (reg >= 8 and reg <= 14 and mode == .FIQ)
@@ -223,7 +223,7 @@ pub const Reigsters = struct {
             return self.r[reg];
     }
 
-    pub fn set(self: *Reigsters, reg: u4, value: u32) void {
+    pub fn set(self: *Registers, reg: u4, value: u32) void {
         const mode = self.cpsr.mode;
 
         if (reg >= 8 and reg <= 14 and mode == .FIQ)

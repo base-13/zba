@@ -1,7 +1,7 @@
 const is = @import("../instruction_set.zig");
 const cpu_state = @import("../cpu_state.zig");
 
-pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Reigsters) bool {
+pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Registers) bool {
     var value: u32 = undefined;
     const rs_content = registers.get(instr.rs);
 
