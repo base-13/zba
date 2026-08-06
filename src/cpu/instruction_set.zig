@@ -74,6 +74,13 @@ pub const MoveRegisterTInstrOpcode = enum(u2) {
     Invalid = 0b11,
 };
 
+pub const MovCmpAddSub8TInstrOpcode = enum(u2) {
+    MOV = 0b00,
+    CMP = 0b01,
+    ADD = 0b10,
+    SUB = 0b11,
+};
+
 pub const DataProcInstr = struct {
     imm_flag: bool,
     opcode: DataProcInstrOpcode,
@@ -184,6 +191,12 @@ pub const AddSubTInstr = struct {
     rd: u3,
 };
 
+pub const MovCmpAddSub8TInstr = struct {
+    opcode: MovCmpAddSub8TInstrOpcode,
+    rd: u3,
+    offset: u8,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -210,6 +223,7 @@ pub const ThumbInstr = union(enum) {
     software_interrupt: SoftwareInterruptInstr,
     move_register: MoveRegisterTInstr,
     add_sub: AddSubTInstr,
+    mov_cmp_add_sub8: MovCmpAddSub8TInstr,
 };
 
 pub const Instr = union(enum) {

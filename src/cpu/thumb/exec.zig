@@ -57,24 +57,74 @@ pub fn execAddSub(instr: is.AddSubTInstr, registers: *cpu_state.Registers) bool 
         value = rs_content -% op2;
 
         carry_flag = rs_content >= op2;
-        const sign_bit1: u1 = @truncate(rs_content >> 31);
-        const sign_bit2: u1 = @truncate(op2 >> 31);
-        const sign_bit3: u1 = @truncate(value >> 31);
-        overflow_flag = (sign_bit1 != sign_bit2) and (sign_bit1 != sign_bit3);
     } else {
         value = rs_content +% op2;
 
         carry_flag = @addWithOverflow(rs_content, op2)[1] == 1;
-        const sign_bit1: u1 = @truncate(rs_content >> 31);
-        const sign_bit2: u1 = @truncate(op2 >> 31);
-        const sign_bit3: u1 = @truncate(value >> 31);
-        overflow_flag = (sign_bit1 == sign_bit2) and (sign_bit1 != sign_bit3);
     }
 
-    registers.cpsr.neg_flag = value >> 31 == 1;
+    const sign_bit1: u1 = @truncate(rs_content >> 31);
+    const sign_bit2: u1 = @truncate(op2 >> 31);
+    const sign_bit3: u1 = @truncate(value >> 31);
+
+    if (instr.sub)
+        overflow_flag = (sign_bit1 != sign_bit2) and (sign_bit1 != sign_bit3)
+    else
+        overflow_flag = (sign_bit1 == sign_bit2) and (sign_bit1 != sign_bit3);
+
+    registers.cpsr.neg_flag = sign_bit3 == 1;
     registers.cpsr.zero_flag = value == 0;
     registers.cpsr.carry_flag = carry_flag;
     registers.cpsr.overflow_flag = overflow_flag;
+
+    return false;
+}
+
+pub fn execMovCmpAddSub8(instr: is.MovCmpAddSub8TInstr, registers: *cpu_state.Registers) bool {
+    var carry_flag: bool = undefined;
+    var overflow_flag: bool = undefined;
+    var neg_flag: bool = undefined;
+    var value: u32 = undefined;
+
+    const rd_content = registers.get(instr.rd);
+
+    switch (instr.opcode) {
+        .ADD => {
+            value = rd_content +% instr.offset;
+
+            carry_flag = @addWithOverflow(rd_content, instr.offset)[1] == 1;
+            const sign_bit1: u1 = @truncate(rd_content >> 31);
+            const sign_bit2: u1 = @truncate(@as(u32, instr.offset) >> 31);
+            const sign_bit3: u1 = @truncate(value >> 31);
+            overflow_flag = (sign_bit1 == sign_bit2) and (sign_bit1 != sign_bit3);
+            neg_flag = sign_bit3 == 1;
+        },
+        .CMP, .SUB => {
+            value = rd_content -% instr.offset;
+
+            carry_flag = rd_content >= instr.offset;
+            const sign_bit1: u1 = @truncate(rd_content >> 31);
+            const sign_bit2: u1 = @truncate(@as(u32, instr.offset) >> 31);
+            const sign_bit3: u1 = @truncate(value >> 31);
+            overflow_flag = (sign_bit1 != sign_bit2) and (sign_bit1 != sign_bit3);
+            neg_flag = sign_bit3 == 1;
+        },
+        .MOV => {
+            value = instr.offset;
+
+            carry_flag = registers.cpsr.carry_flag;
+            overflow_flag = registers.cpsr.overflow_flag;
+            neg_flag = false;
+        },
+    }
+
+    registers.cpsr.carry_flag = carry_flag;
+    registers.cpsr.overflow_flag = overflow_flag;
+    registers.cpsr.neg_flag = neg_flag;
+    registers.cpsr.zero_flag = value == 0;
+
+    if (instr.opcode != .CMP)
+        registers.set(instr.rd, value);
 
     return false;
 }
