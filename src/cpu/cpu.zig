@@ -117,7 +117,8 @@ pub fn poll(io: std.Io) !bool {
         },
         .thumb => |thumb_instr| switch (thumb_instr) {
             .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
-            .move_register => std.debug.print("{}\n", .{thumb_instr}),
+            .move_register => std.debug.print("{}\n", .{thumb_instr.move_register}),
+            .add_sub => std.debug.print("{}\n", .{thumb_instr.add_sub}),
         },
     }
 
@@ -163,6 +164,7 @@ pub fn poll(io: std.Io) !bool {
             instr_updated_pc = switch (thumb_instr) {
                 .software_interrupt => softwareInterrupt(),
                 .move_register => |i| exec_thumb.execMoveRegister(i, &registers),
+                .add_sub => |i| exec_thumb.execAddSub(i, &registers),
             };
         },
     }

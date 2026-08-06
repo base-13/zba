@@ -176,6 +176,14 @@ pub const MoveRegisterTInstr = struct {
     rd: u3,
 };
 
+pub const AddSubTInstr = struct {
+    imm_flag: bool,
+    sub: bool,
+    op2: u3,
+    rs: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -201,6 +209,7 @@ pub const ARMInstr = struct {
 pub const ThumbInstr = union(enum) {
     software_interrupt: SoftwareInterruptInstr,
     move_register: MoveRegisterTInstr,
+    add_sub: AddSubTInstr,
 };
 
 pub const Instr = union(enum) {
