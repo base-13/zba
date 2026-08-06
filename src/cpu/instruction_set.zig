@@ -67,6 +67,13 @@ pub const DataProcInstrOpcode = enum(u4) {
     MVN = 0b1111,
 };
 
+pub const MoveRegisterTInstrOpcode = enum(u2) {
+    LogicalLeft = 0b00,
+    LogicalRight = 0b01,
+    ArithmeticRight = 0b10,
+    Invalid = 0b11,
+};
+
 pub const DataProcInstr = struct {
     imm_flag: bool,
     opcode: DataProcInstrOpcode,
@@ -162,6 +169,13 @@ pub const BranchAndExchangeInstr = struct { rn: u4 };
 
 pub const CoprocessorInstr = struct {};
 
+pub const MoveRegisterTInstr = struct {
+    opcode: MoveRegisterTInstrOpcode,
+    offset: u5,
+    rs: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -186,6 +200,7 @@ pub const ARMInstr = struct {
 
 pub const ThumbInstr = union(enum) {
     software_interrupt: SoftwareInterruptInstr,
+    move_register: MoveRegisterTInstr,
 };
 
 pub const Instr = union(enum) {

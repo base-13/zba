@@ -1,11 +1,8 @@
 const std = @import("std");
 const is = @import("../instruction_set.zig");
+const getNBits = @import("../utils.zig").getNBits;
 
 const log = std.log.scoped(.decoder);
-
-fn getNBits(instr: u32, start: u5, n: u5, T: type) T {
-    return @intCast((instr >> start) & ((@as(u32, 1) << n) - 1));
-}
 
 fn decodeCondition(instr: u32) is.InstrDecodeError!is.Condition {
     const cond = getNBits(instr, 28, 4, u4);
