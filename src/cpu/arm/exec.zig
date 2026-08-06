@@ -80,7 +80,7 @@ fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state
                     shifter_carry = false;
                     offset = 0;
                 } else {
-                    shifter_carry = (rm_content >> @intCast(32 - shift)) & 1 == 1;
+                    shifter_carry = (rm_content >> @intCast(shift - 1)) & 1 == 1;
                     offset = rm_content >> @intCast(shift);
                 }
             },
