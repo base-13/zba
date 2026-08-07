@@ -35,6 +35,14 @@ fn decodeMovCmpAddSub8TInstr(instr: u16) is.MovCmpAddSub8TInstr {
     };
 }
 
+fn decodeALUOpsTInstr(instr: u16) is.ALUOpsTInstr {
+    return .{
+        .opcode = @enumFromInt(getNBits(instr, 6, 4, u4)),
+        .rs = getNBits(instr, 3, 3, u3),
+        .rd = getNBits(instr, 0, 3, u3),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -50,6 +58,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const mov_cmp_add_sub8_bitmask = 0b111_0000000000000;
     const mov_cmp_add_sub8_test = 0b001_0000000000000;
 
+    const alu_ops_bitmask = 0b111111_0000000000;
+    const alu_ops_test = 0b010000_0000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -58,6 +69,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .move_register = try decodeMoveRegisterTInstr(instr) }
     else if (instr & mov_cmp_add_sub8_bitmask == mov_cmp_add_sub8_test)
         decoded_instr = .{ .mov_cmp_add_sub8 = decodeMovCmpAddSub8TInstr(instr) }
+    else if (instr & alu_ops_bitmask == alu_ops_test)
+        decoded_instr = .{ .alu_ops = decodeALUOpsTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

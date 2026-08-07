@@ -1,4 +1,5 @@
 const is = @import("../instruction_set.zig");
+const exec_arm = @import("../arm/exec.zig");
 const cpu_state = @import("../cpu_state.zig");
 
 pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Registers) bool {
@@ -127,4 +128,86 @@ pub fn execMovCmpAddSub8(instr: is.MovCmpAddSub8TInstr, registers: *cpu_state.Re
         registers.set(instr.rd, value);
 
     return false;
+}
+
+pub fn execALUOps(instr: is.ALUOpsTInstr, registers: *cpu_state.Registers) bool {
+    // for ease of implementation we will just execute equivalent ARM instructions
+    return switch (instr.opcode) {
+        .AND,
+        .EOR,
+        .ADC,
+        .SBC,
+        .ORR,
+        .BIC,
+        .MVN,
+        .TST,
+        .CMP,
+        .CMN,
+        => |thumb_alu_opcode| exec_arm.execDataProc(.{
+            .imm_flag = false,
+            .opcode = switch (thumb_alu_opcode) {
+                .AND => .AND,
+                .EOR => .EOR,
+                .ADC => .ADC,
+                .SBC => .SBC,
+                .ORR => .ORR,
+                .BIC => .BIC,
+                .MVN => .MVN,
+                .TST => .TST,
+                .CMP => .CMP,
+                .CMN => .CMN,
+                else => unreachable,
+            },
+            .set_cond_flag = true,
+            .rn = instr.rd,
+            .rd = instr.rd,
+            .op2 = .{
+                .reg_operand = .{
+                    .shift = .{ .shift_amount = 0 },
+                    .shift_type = .LogicalLeft,
+                    .rm = instr.rs,
+                },
+            },
+        }, registers),
+        .NEG => exec_arm.execDataProc(.{
+            .imm_flag = true,
+            .opcode = .RSB,
+            .set_cond_flag = true,
+            .rn = instr.rs,
+            .rd = instr.rd,
+            .op2 = .{ .imm_operand = 0 },
+        }, registers),
+        .LSL,
+        .LSR,
+        .ASR,
+        .ROR,
+        => |shift_type_opcode| exec_arm.execDataProc(.{
+            .imm_flag = false,
+            .opcode = .MOV,
+            .set_cond_flag = true,
+            .rn = 0,
+            .rd = instr.rd,
+            .op2 = .{
+                .reg_operand = .{
+                    .shift = .{ .rs = instr.rs },
+                    .shift_type = switch (shift_type_opcode) {
+                        .LSL => .LogicalLeft,
+                        .LSR => .LogicalRight,
+                        .ASR => .ArithmeticRight,
+                        .ROR => .RotateRight,
+                        else => unreachable,
+                    },
+                    .rm = instr.rd,
+                },
+            },
+        }, registers),
+        .MUL => exec_arm.execMultiply(.{
+            .acc_flag = false,
+            .set_cond_flag = true,
+            .rd = instr.rd,
+            .rn = instr.rd,
+            .rs = instr.rs,
+            .rm = instr.rd,
+        }, registers),
+    };
 }

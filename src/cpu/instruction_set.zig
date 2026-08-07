@@ -81,6 +81,25 @@ pub const MovCmpAddSub8TInstrOpcode = enum(u2) {
     SUB = 0b11,
 };
 
+pub const ALUOpsTInstrOpcode = enum(u4) {
+    AND = 0b0000,
+    EOR = 0b0001,
+    LSL = 0b0010,
+    LSR = 0b0011,
+    ASR = 0b0100,
+    ADC = 0b0101,
+    SBC = 0b0110,
+    ROR = 0b0111,
+    TST = 0b1000,
+    NEG = 0b1001,
+    CMP = 0b1010,
+    CMN = 0b1011,
+    ORR = 0b1100,
+    MUL = 0b1101,
+    BIC = 0b1110,
+    MVN = 0b1111,
+};
+
 pub const DataProcInstr = struct {
     imm_flag: bool,
     opcode: DataProcInstrOpcode,
@@ -197,6 +216,12 @@ pub const MovCmpAddSub8TInstr = struct {
     offset: u8,
 };
 
+pub const ALUOpsTInstr = struct {
+    opcode: ALUOpsTInstrOpcode,
+    rs: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -224,6 +249,7 @@ pub const ThumbInstr = union(enum) {
     move_register: MoveRegisterTInstr,
     add_sub: AddSubTInstr,
     mov_cmp_add_sub8: MovCmpAddSub8TInstr,
+    alu_ops: ALUOpsTInstr,
 };
 
 pub const Instr = union(enum) {
