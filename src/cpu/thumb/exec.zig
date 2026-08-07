@@ -1,6 +1,7 @@
 const is = @import("../instruction_set.zig");
 const exec_arm = @import("../arm/exec.zig");
 const cpu_state = @import("../cpu_state.zig");
+const memory = @import("../../memory.zig");
 
 pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Registers) bool {
     var value: u32 = undefined;
@@ -210,4 +211,16 @@ pub fn execALUOps(instr: is.ALUOpsTInstr, registers: *cpu_state.Registers) bool 
             .rm = instr.rd,
         }, registers),
     };
+}
+
+pub fn execPCRelLoad(
+    instr: is.PCRelLoadTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const address = (registers.get(15) & 0xFFFF_FFFC) +% (@as(u8, instr.offset) << 2);
+
+    registers.set(instr.rd, memory_map.read(address, .Word));
+
+    return false;
 }

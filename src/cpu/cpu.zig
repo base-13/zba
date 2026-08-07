@@ -121,6 +121,7 @@ pub fn poll(io: std.Io) !bool {
             .add_sub => std.debug.print("{}\n", .{thumb_instr.add_sub}),
             .mov_cmp_add_sub8 => std.debug.print("{}\n", .{thumb_instr.mov_cmp_add_sub8}),
             .alu_ops => std.debug.print("{}\n", .{thumb_instr.alu_ops}),
+            .pc_rel_load => std.debug.print("{}\n", .{thumb_instr.pc_rel_load}),
         },
     }
 
@@ -169,6 +170,7 @@ pub fn poll(io: std.Io) !bool {
                 .add_sub => |i| exec_thumb.execAddSub(i, &registers),
                 .mov_cmp_add_sub8 => |i| exec_thumb.execMovCmpAddSub8(i, &registers),
                 .alu_ops => |i| exec_thumb.execALUOps(i, &registers),
+                .pc_rel_load => |i| exec_thumb.execPCRelLoad(i, &registers, &memory_map),
             };
         },
     }
