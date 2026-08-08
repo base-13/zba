@@ -224,3 +224,15 @@ pub fn execPCRelLoad(
 
     return false;
 }
+
+pub fn execAddOffsetToSP(instr: is.AddOffsetToSPTInstr, registers: *cpu_state.Registers) bool {
+    const offset: u9 = instr.offset << 2;
+    const current_sp = registers.get(13);
+
+    if (instr.neg)
+        registers.set(13, current_sp -% offset)
+    else
+        registers.set(13, current_sp +% offset);
+
+    return false;
+}

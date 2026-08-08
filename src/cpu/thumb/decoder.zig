@@ -50,6 +50,13 @@ fn decodePCRelLoadTInstr(instr: u16) is.PCRelLoadTInstr {
     };
 }
 
+fn decodeAddOffsetToSPTInstr(instr: u16) is.AddOffsetToSPTInstr {
+    return .{
+        .neg = getNBits(instr, 7, 1, u1) == 1,
+        .offset = getNBits(instr, 0, 7, u7),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -71,6 +78,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const pc_rel_load_bitmask = 0b11111_00000000000;
     const pc_rel_load_test = 0b01001_00000000000;
 
+    const add_offset_to_sp_bitmask = 0b11111111_00000000;
+    const add_offset_to_sp_test = 0b10110000_00000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -83,6 +93,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .alu_ops = decodeALUOpsTInstr(instr) }
     else if (instr & pc_rel_load_bitmask == pc_rel_load_test)
         decoded_instr = .{ .pc_rel_load = decodePCRelLoadTInstr(instr) }
+    else if (instr & add_offset_to_sp_bitmask == add_offset_to_sp_test)
+        decoded_instr = .{ .add_offset_to_sp = decodeAddOffsetToSPTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

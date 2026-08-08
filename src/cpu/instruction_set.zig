@@ -227,6 +227,11 @@ pub const PCRelLoadTInstr = struct {
     offset: u8,
 };
 
+pub const AddOffsetToSPTInstr = struct {
+    neg: bool,
+    offset: u7,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -256,6 +261,7 @@ pub const ThumbInstr = union(enum) {
     mov_cmp_add_sub8: MovCmpAddSub8TInstr,
     alu_ops: ALUOpsTInstr,
     pc_rel_load: PCRelLoadTInstr,
+    add_offset_to_sp: AddOffsetToSPTInstr,
 };
 
 pub const Instr = union(enum) {
