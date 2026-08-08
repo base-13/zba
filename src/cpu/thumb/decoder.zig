@@ -57,6 +57,10 @@ fn decodeAddOffsetToSPTInstr(instr: u16) is.AddOffsetToSPTInstr {
     };
 }
 
+fn decodeUnconditionalBranchTInstr(instr: u16) is.UnconditionalBranchTInstr {
+    return .{ .offset = @bitCast(getNBits(instr, 0, 11, u11)) };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -81,6 +85,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const add_offset_to_sp_bitmask = 0b11111111_00000000;
     const add_offset_to_sp_test = 0b10110000_00000000;
 
+    const uncondtional_branch_bitmask = 0b11111_00000000000;
+    const uncondtional_branch_test = 0b11100_00000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -95,6 +102,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .pc_rel_load = decodePCRelLoadTInstr(instr) }
     else if (instr & add_offset_to_sp_bitmask == add_offset_to_sp_test)
         decoded_instr = .{ .add_offset_to_sp = decodeAddOffsetToSPTInstr(instr) }
+    else if (instr & uncondtional_branch_bitmask == uncondtional_branch_test)
+        decoded_instr = .{ .unconditional_branch = decodeUnconditionalBranchTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

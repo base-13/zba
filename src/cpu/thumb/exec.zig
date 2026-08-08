@@ -236,3 +236,14 @@ pub fn execAddOffsetToSP(instr: is.AddOffsetToSPTInstr, registers: *cpu_state.Re
 
     return false;
 }
+
+pub fn execUnconditionalBranch(instr: is.UnconditionalBranchTInstr, registers: *cpu_state.Registers) bool {
+    const current_pc = registers.get(15);
+
+    if (instr.offset >= 0)
+        registers.setPC(current_pc +% (@as(u12, @intCast(instr.offset)) << 1))
+    else
+        registers.setPC(current_pc -% (@as(u12, @intCast(instr.offset)) << 1));
+
+    return true;
+}

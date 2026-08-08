@@ -123,6 +123,7 @@ pub fn poll(io: std.Io) !bool {
             .alu_ops => std.debug.print("{}\n", .{thumb_instr.alu_ops}),
             .pc_rel_load => std.debug.print("{}\n", .{thumb_instr.pc_rel_load}),
             .add_offset_to_sp => std.debug.print("{}\n", .{thumb_instr.add_offset_to_sp}),
+            .unconditional_branch => std.debug.print("{}\n", .{thumb_instr.unconditional_branch}),
         },
     }
 
@@ -173,6 +174,7 @@ pub fn poll(io: std.Io) !bool {
                 .alu_ops => |i| exec_thumb.execALUOps(i, &registers),
                 .pc_rel_load => |i| exec_thumb.execPCRelLoad(i, &registers, &memory_map),
                 .add_offset_to_sp => |i| exec_thumb.execAddOffsetToSP(i, &registers),
+                .unconditional_branch => |i| exec_thumb.execUnconditionalBranch(i, &registers),
             };
         },
     }
