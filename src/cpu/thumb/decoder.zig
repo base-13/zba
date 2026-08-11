@@ -61,7 +61,7 @@ fn decodeUnconditionalBranchTInstr(instr: u16) is.UnconditionalBranchTInstr {
     return .{ .offset = @bitCast(getNBits(instr, 0, 11, u11)) };
 }
 
-fn decodeSPRelLoadStoreTInstr(instr: u16) is.PCRelLoadTInstr {
+fn decodeSPRelLoadStoreTInstr(instr: u16) is.SPRelLoadStoreTInstr {
     return .{
         .load = getNBits(instr, 11, 1, u1) == 1,
         .rd = getNBits(instr, 8, 3, u3),
