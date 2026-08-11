@@ -234,6 +234,12 @@ pub const AddOffsetToSPTInstr = struct {
 
 pub const UnconditionalBranchTInstr = struct { offset: i11 };
 
+pub const SPRelLoadStoreTInstr = struct {
+    load: bool,
+    rd: u3,
+    offset: u8,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -265,6 +271,7 @@ pub const ThumbInstr = union(enum) {
     pc_rel_load: PCRelLoadTInstr,
     add_offset_to_sp: AddOffsetToSPTInstr,
     unconditional_branch: UnconditionalBranchTInstr,
+    sp_rel_load_store: SPRelLoadStoreTInstr,
 };
 
 pub const Instr = union(enum) {

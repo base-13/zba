@@ -61,6 +61,14 @@ fn decodeUnconditionalBranchTInstr(instr: u16) is.UnconditionalBranchTInstr {
     return .{ .offset = @bitCast(getNBits(instr, 0, 11, u11)) };
 }
 
+fn decodeSPRelLoadStoreTInstr(instr: u16) is.PCRelLoadTInstr {
+    return .{
+        .load = getNBits(instr, 11, 1, u1) == 1,
+        .rd = getNBits(instr, 8, 3, u3),
+        .offset = getNBits(instr, 0, 8, u8),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -82,6 +90,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const pc_rel_load_bitmask = 0b11111_00000000000;
     const pc_rel_load_test = 0b01001_00000000000;
 
+    const sp_rel_load_store_bitmask = 0b1111_000000000000;
+    const sp_rel_load_store_test = 0b1001_000000000000;
+
     const add_offset_to_sp_bitmask = 0b11111111_00000000;
     const add_offset_to_sp_test = 0b10110000_00000000;
 
@@ -100,6 +111,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .alu_ops = decodeALUOpsTInstr(instr) }
     else if (instr & pc_rel_load_bitmask == pc_rel_load_test)
         decoded_instr = .{ .pc_rel_load = decodePCRelLoadTInstr(instr) }
+    else if (instr & sp_rel_load_store_bitmask == sp_rel_load_store_test)
+        decoded_instr = .{ .sp_rel_load_store = decodeSPRelLoadStoreTInstr(instr) }
     else if (instr & add_offset_to_sp_bitmask == add_offset_to_sp_test)
         decoded_instr = .{ .add_offset_to_sp = decodeAddOffsetToSPTInstr(instr) }
     else if (instr & uncondtional_branch_bitmask == uncondtional_branch_test)

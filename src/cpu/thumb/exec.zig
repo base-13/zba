@@ -247,3 +247,18 @@ pub fn execUnconditionalBranch(instr: is.UnconditionalBranchTInstr, registers: *
 
     return true;
 }
+
+pub fn execSPRelLoadStore(
+    instr: is.SPRelLoadStoreTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const address = (registers.get(13) & 0xFFFF_FFFC) +% (@as(u8, instr.offset) << 2);
+
+    if (instr.load)
+        registers.set(instr.rd, memory_map.read(address, .Word))
+    else
+        memory_map.write(address, registers.get(instr.rd), .Word);
+
+    return false;
+}

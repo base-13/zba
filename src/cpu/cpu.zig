@@ -115,16 +115,7 @@ pub fn poll(io: std.Io) !bool {
             .branch_and_exchange => std.debug.print("{}\n", .{arm_instr}),
             .coprocessor_instr => std.debug.print("Coprocessor Instruction\n", .{}),
         },
-        .thumb => |thumb_instr| switch (thumb_instr) {
-            .software_interrupt => std.debug.print("Software Interrupt Instruction\n", .{}),
-            .move_register => std.debug.print("{}\n", .{thumb_instr.move_register}),
-            .add_sub => std.debug.print("{}\n", .{thumb_instr.add_sub}),
-            .mov_cmp_add_sub8 => std.debug.print("{}\n", .{thumb_instr.mov_cmp_add_sub8}),
-            .alu_ops => std.debug.print("{}\n", .{thumb_instr.alu_ops}),
-            .pc_rel_load => std.debug.print("{}\n", .{thumb_instr.pc_rel_load}),
-            .add_offset_to_sp => std.debug.print("{}\n", .{thumb_instr.add_offset_to_sp}),
-            .unconditional_branch => std.debug.print("{}\n", .{thumb_instr.unconditional_branch}),
-        },
+        .thumb => |thumb_instr| std.debug.print("{}\n", .{thumb_instr}),
     }
 
     var instr_updated_pc = false;
@@ -175,6 +166,7 @@ pub fn poll(io: std.Io) !bool {
                 .pc_rel_load => |i| exec_thumb.execPCRelLoad(i, &registers, &memory_map),
                 .add_offset_to_sp => |i| exec_thumb.execAddOffsetToSP(i, &registers),
                 .unconditional_branch => |i| exec_thumb.execUnconditionalBranch(i, &registers),
+                .sp_rel_load_store => |i| exec_thumb.execSPRelLoadStore(i, &registers, &memory_map),
             };
         },
     }
