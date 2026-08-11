@@ -4,14 +4,6 @@ const getNBits = @import("../utils.zig").getNBits;
 
 const log = std.log.scoped(.decoder);
 
-fn decodeCondition(instr: u32) is.InstrDecodeError!is.Condition {
-    const cond = getNBits(instr, 28, 4, u4);
-
-    if (cond == 0b1111) return is.InstrDecodeError.InvalidInstruction;
-
-    return @enumFromInt(cond);
-}
-
 fn decodeRegOffset(offset: u12) is.InstrDecodeError!is.OffsetOperand.Operand {
     var op2: is.OffsetOperand.Operand = undefined;
 
@@ -288,7 +280,7 @@ fn checkPSRTransferInstr(instr: u32) bool {
 }
 
 pub fn decode(instr: u32) is.InstrDecodeError!is.ARMInstr {
-    const cond = try decodeCondition(instr);
+    const cond = try is.Condition.decodeCondition(getNBits(instr, 28, 4, u4));
     var fields: is.Fields = undefined;
 
     const multiply_bitmask = 0b0000_111111_00000000000000_1111_0000;

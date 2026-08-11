@@ -14,6 +14,12 @@ pub const Condition = enum(u4) {
     GT = 0b1100,
     LE = 0b1101,
     AL = 0b1110,
+
+    pub fn decodeCondition(cond_bits: u4) InstrDecodeError!Condition {
+        if (cond_bits == 0b1111) return InstrDecodeError.InvalidInstruction;
+
+        return @enumFromInt(cond_bits);
+    }
 };
 
 pub const OffsetOperand = struct {
@@ -240,6 +246,11 @@ pub const SPRelLoadStoreTInstr = struct {
     offset: u8,
 };
 
+pub const ConditionalBranchTInstr = struct {
+    cond: Condition,
+    offset: i8,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -272,6 +283,7 @@ pub const ThumbInstr = union(enum) {
     add_offset_to_sp: AddOffsetToSPTInstr,
     unconditional_branch: UnconditionalBranchTInstr,
     sp_rel_load_store: SPRelLoadStoreTInstr,
+    conditional_branch: ConditionalBranchTInstr,
 };
 
 pub const Instr = union(enum) {

@@ -2,6 +2,7 @@ const is = @import("../instruction_set.zig");
 const exec_arm = @import("../arm/exec.zig");
 const cpu_state = @import("../cpu_state.zig");
 const memory = @import("../../memory.zig");
+const utils = @import("../utils.zig");
 
 pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Registers) bool {
     var value: u32 = undefined;
@@ -261,4 +262,19 @@ pub fn execSPRelLoadStore(
         memory_map.write(address, registers.get(instr.rd), .Word);
 
     return false;
+}
+
+pub fn execConditionalBranch(instr: is.ConditionalBranchTInstr, registers: *cpu_state.Registers) bool {
+    const cond_true = utils.checkCondition(instr.cond, registers);
+
+    if (cond_true) {
+        const current_pc = registers.get(15);
+
+        if (instr.offset >= 0)
+            registers.setPC(current_pc +% (@as(u9, @intCast(instr.offset)) << 1))
+        else
+            registers.setPC(current_pc -% (@as(u9, @intCast(instr.offset)) << 1));
+    }
+
+    return cond_true;
 }

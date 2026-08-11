@@ -69,6 +69,17 @@ fn decodeSPRelLoadStoreTInstr(instr: u16) is.SPRelLoadStoreTInstr {
     };
 }
 
+fn decodeConditionalBranchTInstr(instr: u16) is.InstrDecodeError!is.ConditionalBranchTInstr {
+    const cond = try is.Condition.decodeCondition(getNBits(instr, 8, 4, u4));
+
+    if (cond == .AL) return is.InstrDecodeError.InvalidInstruction;
+
+    return .{
+        .cond = cond,
+        .offset = @bitCast(getNBits(instr, 0, 8, u8)),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -99,6 +110,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const uncondtional_branch_bitmask = 0b11111_00000000000;
     const uncondtional_branch_test = 0b11100_00000000000;
 
+    const conditional_branch_bitmask = 0b1111_000000000000;
+    const conditional_branch_test = 0b1101_000000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -117,6 +131,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .add_offset_to_sp = decodeAddOffsetToSPTInstr(instr) }
     else if (instr & uncondtional_branch_bitmask == uncondtional_branch_test)
         decoded_instr = .{ .unconditional_branch = decodeUnconditionalBranchTInstr(instr) }
+    else if (instr & conditional_branch_bitmask == conditional_branch_test)
+        decoded_instr = .{ .conditional_branch = try decodeConditionalBranchTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

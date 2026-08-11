@@ -6,6 +6,7 @@ const decoder_thumb = @import("thumb/decoder.zig");
 const exec_arm = @import("arm/exec.zig");
 const exec_thumb = @import("thumb/exec.zig");
 const memory = @import("../memory.zig");
+const utils = @import("./utils.zig");
 
 var registers = cpu_state.Registers{};
 
@@ -122,7 +123,7 @@ pub fn poll(io: std.Io) !bool {
 
     switch (instr) {
         .arm => |arm_instr| {
-            if (exec_arm.checkCondition(arm_instr, &registers)) {
+            if (utils.checkCondition(arm_instr.cond, &registers)) {
                 instr_updated_pc =
                     switch (arm_instr.fields) {
                         .data_proc => |i| exec_arm.execDataProc(i, &registers),
@@ -167,6 +168,7 @@ pub fn poll(io: std.Io) !bool {
                 .add_offset_to_sp => |i| exec_thumb.execAddOffsetToSP(i, &registers),
                 .unconditional_branch => |i| exec_thumb.execUnconditionalBranch(i, &registers),
                 .sp_rel_load_store => |i| exec_thumb.execSPRelLoadStore(i, &registers, &memory_map),
+                .conditional_branch => |i| exec_thumb.execConditionalBranch(i, &registers),
             };
         },
     }

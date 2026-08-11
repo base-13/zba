@@ -13,31 +13,6 @@ fn rotateRight(x: u32, n: u32) u32 {
     return (x >> shift) | (x << inv);
 }
 
-pub fn checkCondition(instr: is.ARMInstr, registers: *cpu_state.Registers) bool {
-    const zero = registers.cpsr.zero_flag;
-    const carry = registers.cpsr.carry_flag;
-    const neg = registers.cpsr.neg_flag;
-    const overflow = registers.cpsr.overflow_flag;
-
-    return switch (instr.cond) {
-        .EQ => zero,
-        .NE => !zero,
-        .CS => carry,
-        .CC => !carry,
-        .MI => neg,
-        .PL => !neg,
-        .VS => overflow,
-        .VC => !overflow,
-        .HI => carry and !zero,
-        .LS => !carry and zero,
-        .GE => neg == overflow,
-        .LT => neg != overflow,
-        .GT => !zero and neg == overflow,
-        .LE => neg or neg != overflow,
-        .AL => true,
-    };
-}
-
 fn calcRegOffset(offset_operand: is.OffsetOperand.Operand, registers: *cpu_state.Registers) struct { u32, ?bool } {
     var offset: u32 = undefined;
     var shifter_carry: ?bool = null;
