@@ -1,6 +1,6 @@
 # ZBA
 
-ZBA is a [Game Boy Advance](https://en.wikipedia.org/wiki/Game_Boy_Advance) emulator writtne in Zig
+ZBA is a [Game Boy Advance](https://en.wikipedia.org/wiki/Game_Boy_Advance) emulator written in Zig
 
 **Note:** This project is currently under-development
 
