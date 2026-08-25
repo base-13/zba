@@ -101,6 +101,13 @@ pub const ALUOpsTInstrOpcode = enum(u4) {
     MVN = 0b1111,
 };
 
+pub const HiRegOpsAndBXTInstrOpcode = enum(u2) {
+    ADD = 0b00,
+    CMP = 0b01,
+    MOV = 0b10,
+    BX = 0b11,
+};
+
 pub const DataProcInstr = struct {
     imm_flag: bool,
     opcode: DataProcInstrOpcode,
@@ -258,6 +265,14 @@ pub const PushPopTInstr = struct {
     r_list: [8]bool,
 };
 
+pub const HiRegOpsAndBXTInstr = struct {
+    opcode: HiRegOpsAndBXTInstrOpcode,
+    h1: bool,
+    h2: bool,
+    rs: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -293,6 +308,7 @@ pub const ThumbInstr = union(enum) {
     conditional_branch: ConditionalBranchTInstr,
     load_address: LoadAddressTInstr,
     push_pop: PushPopTInstr,
+    hi_reg_ops_and_bx: HiRegOpsAndBXTInstr,
 };
 
 pub const Instr = union(enum) {

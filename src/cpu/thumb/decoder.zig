@@ -101,6 +101,16 @@ fn decodePushPopTInstr(instr: u16) is.PushPopTInstr {
     };
 }
 
+fn decodeHiRegOpsAndBXTInstr(instr: u16) is.HiRegOpsAndBXTInstr {
+    return .{
+        .opcode = @enumFromInt(getNBits(instr, 8, 2, u2)),
+        .h1 = getNBits(instr, 7, 1, u1) == 1,
+        .h2 = getNBits(instr, 6, 1, u1) == 1,
+        .rs = getNBits(instr, 3, 3, u3),
+        .rd = getNBits(instr, 0, 3, u3),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -140,6 +150,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const push_pop_bitmask = 0b1111_0_11_000000000;
     const push_pop_test = 0b1011_0_10_000000000;
 
+    const hi_reg_ops_and_bx_bitmask = 0b111111_0000000000;
+    const hi_reg_ops_and_bx_test = 0b010001_0000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -164,6 +177,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .load_address = decodeLoadAddressTInstr(instr) }
     else if (instr & push_pop_bitmask == push_pop_test)
         decoded_instr = .{ .push_pop = decodePushPopTInstr(instr) }
+    else if (instr & hi_reg_ops_and_bx_bitmask == hi_reg_ops_and_bx_test)
+        decoded_instr = .{ .hi_reg_ops_and_bx = decodeHiRegOpsAndBXTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

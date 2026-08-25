@@ -171,6 +171,7 @@ pub fn poll(io: std.Io) !bool {
                 .conditional_branch => |i| exec_thumb.execConditionalBranch(i, &registers),
                 .load_address => |i| exec_thumb.execLoadAddress(i, &registers),
                 .push_pop => |i| exec_thumb.execPushPop(i, &registers, &memory_map),
+                .hi_reg_ops_and_bx => |i| exec_thumb.execHiRegOpsAndBX(i, &registers),
             };
         },
     }

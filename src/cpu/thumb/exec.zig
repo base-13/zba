@@ -336,3 +336,51 @@ pub fn execPushPop(
 
     return instr.pc_lr and instr.load;
 }
+
+pub fn execHiRegOpsAndBX(
+    instr: is.HiRegOpsAndBXTInstr,
+    registers: *cpu_state.Registers,
+) bool {
+    var pc_changed = false;
+
+    var rd: u4 = instr.rd;
+    var rs: u4 = instr.rs;
+
+    if (instr.h1)
+        rd += 8;
+    if (instr.h1)
+        rs += 8;
+
+    switch (instr.opcode) {
+        .ADD,
+        .MOV,
+        .CMP,
+        => pc_changed = exec_arm.execDataProc(.{
+            .imm_flag = false,
+            .opcode = switch (instr.opcode) {
+                .ADD => .ADD,
+                .MOV => .MOV,
+                .CMP => .CMP,
+                else => unreachable,
+            },
+            .set_cond_flag = instr.opcode == .CMP,
+            .rn = instr.rd,
+            .rd = instr.rd,
+            .op2 = .{
+                .reg_operand = .{
+                    .shift = .{ .shift_amount = 0 },
+                    .shift_type = .LogicalLeft,
+                    .rm = instr.rs,
+                },
+            },
+        }, registers),
+        .BX => {
+            const addr = registers.get(rs);
+            registers.setPC(addr);
+            registers.cpsr.thumb_state = addr & 1 == 1;
+            pc_changed = true;
+        },
+    }
+
+    return pc_changed;
+}
