@@ -70,7 +70,7 @@ fn decodeSPRelLoadStoreTInstr(instr: u16) is.SPRelLoadStoreTInstr {
 }
 
 fn decodeConditionalBranchTInstr(instr: u16) is.InstrDecodeError!is.ConditionalBranchTInstr {
-    const cond = try is.Condition.decodeCondition(getNBits(instr, 8, 4, u4));
+    const cond: is.Condition = @enumFromInt(getNBits(instr, 8, 4, u4));
 
     if (cond == .AL) return is.InstrDecodeError.InvalidInstruction;
 

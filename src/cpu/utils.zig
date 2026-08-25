@@ -27,5 +27,6 @@ pub fn checkCondition(cond: is.Condition, registers: *cpu_state.Registers) bool 
         .GT => !zero and neg == overflow,
         .LE => neg or neg != overflow,
         .AL => true,
+        .NV => false,
     };
 }

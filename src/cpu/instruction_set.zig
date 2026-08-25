@@ -14,12 +14,7 @@ pub const Condition = enum(u4) {
     GT = 0b1100,
     LE = 0b1101,
     AL = 0b1110,
-
-    pub fn decodeCondition(cond_bits: u4) InstrDecodeError!Condition {
-        if (cond_bits == 0b1111) return InstrDecodeError.InvalidInstruction;
-
-        return @enumFromInt(cond_bits);
-    }
+    NV = 0b1111,
 };
 
 pub const OffsetOperand = struct {

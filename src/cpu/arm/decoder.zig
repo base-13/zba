@@ -280,7 +280,7 @@ fn checkPSRTransferInstr(instr: u32) bool {
 }
 
 pub fn decode(instr: u32) is.InstrDecodeError!is.ARMInstr {
-    const cond = try is.Condition.decodeCondition(getNBits(instr, 28, 4, u4));
+    const cond: is.Condition = @enumFromInt(getNBits(instr, 28, 4, u4));
     var fields: is.Fields = undefined;
 
     const multiply_bitmask = 0b0000_111111_00000000000000_1111_0000;
