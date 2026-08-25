@@ -80,6 +80,27 @@ fn decodeConditionalBranchTInstr(instr: u16) is.InstrDecodeError!is.ConditionalB
     };
 }
 
+fn decodeLoadAddressTInstr(instr: u16) is.LoadAddressTInstr {
+    return .{
+        .sp = getNBits(instr, 11, 1, u1) == 1,
+        .rd = getNBits(instr, 8, 3, u3),
+        .offset = getNBits(instr, 0, 8, u8),
+    };
+}
+
+fn decodePushPopTInstr(instr: u16) is.PushPopTInstr {
+    var r_list: [8]bool = undefined;
+
+    for (0..16) |i|
+        r_list[i] = getNBits(instr, @intCast(i), 1, u1) == 1;
+
+    return .{
+        .load = getNBits(instr, 11, 1, u1) == 1,
+        .pc_lr = getNBits(instr, 8, 1, u1) == 1,
+        .r_list = r_list,
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -113,6 +134,12 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const conditional_branch_bitmask = 0b1111_000000000000;
     const conditional_branch_test = 0b1101_000000000000;
 
+    const load_address_bitmask = 0b1111_000000000000;
+    const load_address_test = 0b1010_000000000000;
+
+    const push_pop_bitmask = 0b1111_0_11_000000000;
+    const push_pop_test = 0b1011_0_10_000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -133,6 +160,10 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .unconditional_branch = decodeUnconditionalBranchTInstr(instr) }
     else if (instr & conditional_branch_bitmask == conditional_branch_test)
         decoded_instr = .{ .conditional_branch = try decodeConditionalBranchTInstr(instr) }
+    else if (instr & load_address_bitmask == load_address_test)
+        decoded_instr = .{ .load_address = decodeLoadAddressTInstr(instr) }
+    else if (instr & push_pop_bitmask == push_pop_test)
+        decoded_instr = .{ .push_pop = decodePushPopTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 

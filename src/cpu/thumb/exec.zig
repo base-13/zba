@@ -278,3 +278,61 @@ pub fn execConditionalBranch(instr: is.ConditionalBranchTInstr, registers: *cpu_
 
     return cond_true;
 }
+
+pub fn execLoadAddress(instr: is.LoadAddressTInstr, registers: *cpu_state.Registers) bool {
+    var base_value: u32 = undefined;
+
+    if (instr.sp)
+        base_value = registers.get(13)
+    else
+        base_value = registers.get(15) & 0xFFFF_FFFC;
+
+    registers.set(instr.rd, base_value +% (instr.offset << 2));
+
+    return false;
+}
+
+pub fn execPushPop(
+    instr: is.PushPopTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    var n: u4 = 0;
+
+    for (instr.r_list) |r_enabled| {
+        if (r_enabled) n += 1;
+    }
+    if (instr.pc_lr) n += 1;
+
+    const sp = registers.get(13);
+    var addr: u32 = sp;
+
+    if (instr.load) {
+        for (instr.r_list, 0..) |r_enabled, r| {
+            if (r_enabled) {
+                registers.set(@intCast(r), memory_map.read(addr, .Word));
+                addr += 4;
+            }
+        }
+
+        if (instr.pc_lr)
+            registers.setPC(memory_map.read(addr, .Word));
+
+        registers.set(13, sp + 4 * n);
+    } else {
+        addr -= 4 * n;
+        for (instr.r_list, 0..) |r_enabled, r| {
+            if (r_enabled) {
+                memory_map.write(addr, registers.get(@intCast(r)), .Word);
+                addr += 4;
+            }
+        }
+
+        if (instr.pc_lr)
+            memory_map.write(addr, registers.get(14), .Word);
+
+        registers.set(13, sp - 4 * n);
+    }
+
+    return instr.pc_lr and instr.load;
+}

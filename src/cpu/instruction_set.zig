@@ -251,6 +251,18 @@ pub const ConditionalBranchTInstr = struct {
     offset: i8,
 };
 
+pub const LoadAddressTInstr = struct {
+    sp: bool,
+    rd: u3,
+    offset: u8,
+};
+
+pub const PushPopTInstr = struct {
+    load: bool,
+    pc_lr: bool,
+    r_list: [8]bool,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -284,6 +296,8 @@ pub const ThumbInstr = union(enum) {
     unconditional_branch: UnconditionalBranchTInstr,
     sp_rel_load_store: SPRelLoadStoreTInstr,
     conditional_branch: ConditionalBranchTInstr,
+    load_address: LoadAddressTInstr,
+    push_pop: PushPopTInstr,
 };
 
 pub const Instr = union(enum) {

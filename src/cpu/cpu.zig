@@ -169,6 +169,8 @@ pub fn poll(io: std.Io) !bool {
                 .unconditional_branch => |i| exec_thumb.execUnconditionalBranch(i, &registers),
                 .sp_rel_load_store => |i| exec_thumb.execSPRelLoadStore(i, &registers, &memory_map),
                 .conditional_branch => |i| exec_thumb.execConditionalBranch(i, &registers),
+                .load_address => |i| exec_thumb.execLoadAddress(i, &registers),
+                .push_pop => |i| exec_thumb.execPushPop(i, &registers, &memory_map),
             };
         },
     }
