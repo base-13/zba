@@ -273,6 +273,14 @@ pub const HiRegOpsAndBXTInstr = struct {
     rd: u3,
 };
 
+pub const LSRegOffsetTInstr = struct {
+    load: bool,
+    byte: bool,
+    ro: u3,
+    rb: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -309,6 +317,7 @@ pub const ThumbInstr = union(enum) {
     load_address: LoadAddressTInstr,
     push_pop: PushPopTInstr,
     hi_reg_ops_and_bx: HiRegOpsAndBXTInstr,
+    ls_reg_offset: LSRegOffsetTInstr,
 };
 
 pub const Instr = union(enum) {

@@ -337,10 +337,7 @@ pub fn execPushPop(
     return instr.pc_lr and instr.load;
 }
 
-pub fn execHiRegOpsAndBX(
-    instr: is.HiRegOpsAndBXTInstr,
-    registers: *cpu_state.Registers,
-) bool {
+pub fn execHiRegOpsAndBX(instr: is.HiRegOpsAndBXTInstr, registers: *cpu_state.Registers) bool {
     var pc_changed = false;
 
     var rd: u4 = instr.rd;
@@ -383,4 +380,29 @@ pub fn execHiRegOpsAndBX(
     }
 
     return pc_changed;
+}
+
+pub fn execLSRegOffset(
+    instr: is.LSRegOffsetTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const addr = registers.get(instr.rb) +% registers.get(instr.ro);
+    const old_value = memory_map.read(addr, .Word);
+
+    if (instr.load) {
+        var new_value = old_value;
+
+        if (instr.byte) new_value &= 0xFF;
+
+        registers.set(instr.rd, new_value);
+    } else {
+        var new_value = registers.get(instr.rd);
+
+        if (instr.byte) new_value = (old_value & 0xFFFF_FF00) | (new_value & 0xFF);
+
+        memory_map.write(addr, new_value, .Word);
+    }
+
+    return false;
 }
