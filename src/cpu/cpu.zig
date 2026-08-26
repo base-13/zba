@@ -174,6 +174,7 @@ pub fn poll(io: std.Io) !bool {
                 .hi_reg_ops_and_bx => |i| exec_thumb.execHiRegOpsAndBX(i, &registers),
                 .ls_reg_offset => |i| exec_thumb.execLSRegOffset(i, &registers, &memory_map),
                 .ls_imm_offset => |i| exec_thumb.execLSImmOffset(i, &registers, &memory_map),
+                .ls_halfword => |i| exec_thumb.execLSHalfword(i, &registers, &memory_map),
             };
         },
     }

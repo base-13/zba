@@ -431,3 +431,18 @@ pub fn execLSImmOffset(
 
     return false;
 }
+
+pub fn execLSHalfword(
+    instr: is.LSHalfwordTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const addr = registers.get(instr.rb) +% (instr.offset << 1);
+
+    if (instr.load)
+        registers.set(instr.rd, memory_map.read(addr, .HalfWord))
+    else
+        memory_map.write(addr, @truncate(registers.get(instr.rd)), .HalfWord);
+
+    return false;
+}
