@@ -446,3 +446,28 @@ pub fn execLSHalfword(
 
     return false;
 }
+
+pub fn execLSSignEx(
+    instr: is.LSSignExTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const addr = registers.get(instr.rb) +% registers.get(instr.ro);
+
+    switch (instr.opcode) {
+        .STRH => memory_map.write(addr, registers.get(instr.rd), .HalfWord),
+        .LDRH => registers.set(instr.rd, memory_map.read(addr, .HalfWord)),
+        .LDSB => {
+            const value: i8 = @bitCast(@as(u8, @truncate(memory_map.read(addr, .Word) & 0xFF)));
+
+            registers.set(instr.rd, @bitCast(@as(i32, value)));
+        },
+        .LDSH => {
+            const value: i16 = @bitCast(memory_map.read(addr, .HalfWord));
+
+            registers.set(instr.rd, @bitCast(@as(i32, value)));
+        },
+    }
+
+    return false;
+}

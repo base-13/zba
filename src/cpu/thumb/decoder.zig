@@ -140,6 +140,15 @@ fn decodeLSHalfwordTInstr(instr: u16) is.LSHalfwordTInstr {
     };
 }
 
+fn decodeLSSignExTInstr(instr: u16) is.LSSignExTInstr {
+    return .{
+        .opcode = @enumFromInt(getNBits(instr, 10, 2, u2)),
+        .ro = getNBits(instr, 6, 3, u3),
+        .rb = getNBits(instr, 3, 3, u3),
+        .rd = getNBits(instr, 0, 3, u3),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -191,6 +200,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const ls_halfword_bitmask = 0b1111_000000000000;
     const ls_halfword_test = 0b1000_000000000000;
 
+    const ls_sign_ex_bitmask = 0b1111_00_1000000000;
+    const ls_sign_ex_test = 0b0101_00_1000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -215,6 +227,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .load_address = decodeLoadAddressTInstr(instr) }
     else if (instr & push_pop_bitmask == push_pop_test)
         decoded_instr = .{ .push_pop = decodePushPopTInstr(instr) }
+    else if (instr & ls_sign_ex_bitmask == ls_sign_ex_test)
+        decoded_instr = .{ .ls_sign_ex = decodeLSSignExTInstr(instr) }
     else if (instr & ls_reg_offset_bitmask == ls_reg_offset_test)
         decoded_instr = .{ .ls_reg_offset = decodeLSRegOffsetTInstr(instr) }
     else if (instr & ls_halfword_bitmask == ls_halfword_test)

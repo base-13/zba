@@ -175,6 +175,7 @@ pub fn poll(io: std.Io) !bool {
                 .ls_reg_offset => |i| exec_thumb.execLSRegOffset(i, &registers, &memory_map),
                 .ls_imm_offset => |i| exec_thumb.execLSImmOffset(i, &registers, &memory_map),
                 .ls_halfword => |i| exec_thumb.execLSHalfword(i, &registers, &memory_map),
+                .ls_sign_ex => |i| exec_thumb.execLSSignEx(i, &registers, &memory_map),
             };
         },
     }

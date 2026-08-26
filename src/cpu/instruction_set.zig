@@ -108,6 +108,13 @@ pub const HiRegOpsAndBXTInstrOpcode = enum(u2) {
     BX = 0b11,
 };
 
+pub const LSSignExTInstrOpcode = enum(u2) {
+    STRH = 0b00,
+    LDSB = 0b01,
+    LDRH = 0b10,
+    LDSH = 0b11,
+};
+
 pub const DataProcInstr = struct {
     imm_flag: bool,
     opcode: DataProcInstrOpcode,
@@ -296,6 +303,13 @@ pub const LSHalfwordTInstr = struct {
     rd: u3,
 };
 
+pub const LSSignExTInstr = struct {
+    opcode: LSSignExTInstrOpcode,
+    ro: u3,
+    rb: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -335,6 +349,7 @@ pub const ThumbInstr = union(enum) {
     ls_reg_offset: LSRegOffsetTInstr,
     ls_imm_offset: LSImmOffsetTInstr,
     ls_halfword: LSHalfwordTInstr,
+    ls_sign_ex: LSSignExTInstr,
 };
 
 pub const Instr = union(enum) {
