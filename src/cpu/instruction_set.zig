@@ -281,6 +281,14 @@ pub const LSRegOffsetTInstr = struct {
     rd: u3,
 };
 
+pub const LSImmOffsetTInstr = struct {
+    byte: bool,
+    load: bool,
+    offset: u5,
+    rb: u3,
+    rd: u3,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -318,6 +326,7 @@ pub const ThumbInstr = union(enum) {
     push_pop: PushPopTInstr,
     hi_reg_ops_and_bx: HiRegOpsAndBXTInstr,
     ls_reg_offset: LSRegOffsetTInstr,
+    ls_imm_offset: LSImmOffsetTInstr,
 };
 
 pub const Instr = union(enum) {

@@ -406,3 +406,28 @@ pub fn execLSRegOffset(
 
     return false;
 }
+
+pub fn execLSImmOffset(
+    instr: is.LSImmOffsetTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    const addr = registers.get(instr.rb) +% (instr.offset << 2);
+    const old_value = memory_map.read(addr, .Word);
+
+    if (instr.load) {
+        var new_value = old_value;
+
+        if (instr.byte) new_value &= 0xFF;
+
+        registers.set(instr.rd, new_value);
+    } else {
+        var new_value = registers.get(instr.rd);
+
+        if (instr.byte) new_value = (old_value & 0xFFFF_FF00) | (new_value & 0xFF);
+
+        memory_map.write(addr, new_value, .Word);
+    }
+
+    return false;
+}

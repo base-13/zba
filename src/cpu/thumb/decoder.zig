@@ -121,6 +121,16 @@ fn decodeLSRegOffsetTInstr(instr: u16) is.LSRegOffsetTInstr {
     };
 }
 
+fn decodeLSImmOffsetTInstr(instr: u16) is.LSImmOffsetTInstr {
+    return .{
+        .byte = getNBits(instr, 12, 1, u1) == 1,
+        .load = getNBits(instr, 11, 1, u1) == 1,
+        .offset = getNBits(instr, 6, 5, u5),
+        .rb = getNBits(instr, 3, 3, u3),
+        .rd = getNBits(instr, 0, 3, u3),
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -166,6 +176,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const ls_reg_offset_bitmask = 0b1111_00_1_000000000;
     const ls_reg_offset_test = 0b0101_00_0_000000000;
 
+    const ls_imm_offset_bitmask = 0b111_0000000000000;
+    const ls_imm_offset_test = 0b011_0000000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -192,6 +205,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .push_pop = decodePushPopTInstr(instr) }
     else if (instr & ls_reg_offset_bitmask == ls_reg_offset_test)
         decoded_instr = .{ .ls_reg_offset = decodeLSRegOffsetTInstr(instr) }
+    else if (instr & ls_imm_offset_bitmask == ls_imm_offset_test)
+        decoded_instr = .{ .ls_imm_offset = decodeLSImmOffsetTInstr(instr) }
     else if (instr & hi_reg_ops_and_bx_bitmask == hi_reg_ops_and_bx_test)
         decoded_instr = .{ .hi_reg_ops_and_bx = decodeHiRegOpsAndBXTInstr(instr) }
     else
