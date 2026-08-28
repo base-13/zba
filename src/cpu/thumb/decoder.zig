@@ -91,7 +91,7 @@ fn decodeLoadAddressTInstr(instr: u16) is.LoadAddressTInstr {
 fn decodePushPopTInstr(instr: u16) is.PushPopTInstr {
     var r_list: [8]bool = undefined;
 
-    for (0..16) |i|
+    for (0..8) |i|
         r_list[i] = getNBits(instr, @intCast(i), 1, u1) == 1;
 
     return .{
