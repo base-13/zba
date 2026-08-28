@@ -471,3 +471,26 @@ pub fn execLSSignEx(
 
     return false;
 }
+
+pub fn execMultipleLS(
+    instr: is.MultipleLSTInstr,
+    registers: *cpu_state.Registers,
+    memory_map: *memory.MemoryMap,
+) bool {
+    var addr = registers.get(instr.rb);
+
+    for (instr.r_list, 0..) |r_enabled, r| {
+        if (r_enabled) {
+            if (instr.load)
+                registers.set(@intCast(r), memory_map.read(addr, .Word))
+            else
+                memory_map.write(addr, registers.get(@intCast(r)), .Word);
+
+            addr += 4;
+        }
+    }
+
+    registers.set(instr.rb, addr);
+
+    return false;
+}
