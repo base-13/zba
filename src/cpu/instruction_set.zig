@@ -310,6 +310,12 @@ pub const LSSignExTInstr = struct {
     rd: u3,
 };
 
+pub const MultipleLSTInstr = struct {
+    load: bool,
+    rb: u3,
+    r_list: [8]bool,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -350,6 +356,7 @@ pub const ThumbInstr = union(enum) {
     ls_imm_offset: LSImmOffsetTInstr,
     ls_halfword: LSHalfwordTInstr,
     ls_sign_ex: LSSignExTInstr,
+    multiple_ls: MultipleLSTInstr,
 };
 
 pub const Instr = union(enum) {

@@ -149,6 +149,19 @@ fn decodeLSSignExTInstr(instr: u16) is.LSSignExTInstr {
     };
 }
 
+fn decodeMultipleLSTInstr(instr: u16) is.MultipleLSTInstr {
+    var r_list: [8]bool = undefined;
+
+    for (0..8) |i|
+        r_list[i] = getNBits(instr, @intCast(i), 1, u1) == 1;
+
+    return .{
+        .load = getNBits(instr, 11, 1, u1) == 1,
+        .rb = getNBits(instr, 8, 3, u3),
+        .r_list = r_list,
+    };
+}
+
 pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     var decoded_instr: is.ThumbInstr = undefined;
 
@@ -203,6 +216,9 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
     const ls_sign_ex_bitmask = 0b1111_00_1000000000;
     const ls_sign_ex_test = 0b0101_00_1000000000;
 
+    const multiple_ls_bitmask = 0b1111000000000000;
+    const multiple_ls_test = 0b1100000000000000;
+
     if (instr & software_interrupt_bitmask == software_interrupt_test)
         decoded_instr = .{ .software_interrupt = .{} }
     else if (instr & add_sub_bitmask == add_sub_test)
@@ -237,6 +253,8 @@ pub fn decode(instr: u16) InstrDecodeError!is.ThumbInstr {
         decoded_instr = .{ .ls_imm_offset = decodeLSImmOffsetTInstr(instr) }
     else if (instr & hi_reg_ops_and_bx_bitmask == hi_reg_ops_and_bx_test)
         decoded_instr = .{ .hi_reg_ops_and_bx = decodeHiRegOpsAndBXTInstr(instr) }
+    else if (instr & multiple_ls_bitmask == multiple_ls_test)
+        decoded_instr = .{ .multiple_ls = decodeMultipleLSTInstr(instr) }
     else
         return InstrDecodeError.InvalidInstruction;
 
