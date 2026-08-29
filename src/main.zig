@@ -1,5 +1,35 @@
 const std = @import("std");
 const cpu = @import("cpu/cpu.zig");
+const builtin = @import("builtin");
+
+var recved_sigint = false;
+
+fn installSigintHandler() !void {
+    const Handler = struct {
+        fn handler(_: c_int) callconv(.c) void {
+            recved_sigint = true;
+        }
+    };
+
+    if (comptime builtin.os.tag == .windows) {
+        const winapi = struct {
+            const SigHandler = fn (signum: c_int) callconv(.c) void;
+            extern fn signal(signum: c_int, ?*const SigHandler) callconv(.c) void;
+        };
+        winapi.signal(
+            2, // SIGINT
+            &Handler.handler,
+        );
+    } else {
+        const action = std.posix.Sigaction{
+            .handler = .{ .handler = Handler.handler },
+            .mask = std.posix.sigemptyset(),
+            .flags = 0,
+        };
+
+        try std.posix.sigaction(std.posix.SIG.INT, &action, null);
+    }
+}
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
@@ -29,12 +59,14 @@ pub fn main(init: std.process.Init) !void {
     var file_reader = file.reader(io, &file_buf);
     var file_reader_interface = &file_reader.interface;
 
+    try installSigintHandler();
+
     const bios = try file_reader_interface.readAlloc(allocator, file_size);
     cpu.setBIOS(bios);
 
-    var run = true;
-
-    while (run) {
-        run = try cpu.poll(io);
+    while (!recved_sigint) {
+        try cpu.poll(io, false);
     }
+
+    try cpu.poll(io, true);
 }

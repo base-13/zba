@@ -19,7 +19,6 @@ fn getInstr(pc: u32) is.InstrDecodeError!is.Instr {
 }
 
 var memory_map: memory.MemoryMap = .{};
-var last_instr_addr: u32 = undefined;
 
 pub fn setBIOS(bios: []u8) void {
     if (bios.len > 16 * 1024) {
@@ -28,7 +27,6 @@ pub fn setBIOS(bios: []u8) void {
     }
 
     std.mem.copyForwards(u8, memory_map.bios[0..bios.len], bios);
-    last_instr_addr = @intCast(bios.len);
 }
 
 fn softwareInterrupt() bool {
@@ -49,10 +47,10 @@ fn softwareInterrupt() bool {
     return true;
 }
 
-pub fn poll(io: std.Io) !bool {
+pub fn poll(io: std.Io, exit: bool) !void {
     const pc = registers.getPC();
 
-    if (pc >= last_instr_addr) { // we will currently only run in BIOS region and stop at the end of ROM
+    if (exit) {
         std.debug.print("\n\nPC: {} GPRs: ", .{registers.getPC()});
         for (0..16) |i|
             std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
@@ -75,7 +73,7 @@ pub fn poll(io: std.Io) !bool {
         try i_wram_file.writeStreamingAll(io, &memory_map.i_wram);
         try e_wram_file.writeStreamingAll(io, &memory_map.e_wram);
 
-        return false;
+        return;
     }
 
     const instr = getInstr(pc) catch {
@@ -92,7 +90,7 @@ pub fn poll(io: std.Io) !bool {
         registers.cpsr.irq_disable = true;
         registers.cpsr.thumb_state = false;
 
-        return true;
+        return;
     };
 
     switch (instr) {
@@ -184,6 +182,4 @@ pub fn poll(io: std.Io) !bool {
 
     if (!instr_updated_pc)
         registers.setPC(pc + 4);
-
-    return true;
 }
