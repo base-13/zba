@@ -494,3 +494,27 @@ pub fn execMultipleLS(
 
     return false;
 }
+
+pub fn execLongBranchWithLink(instr: is.LongBranchWithLinkTInstr, registers: *cpu_state.Registers) bool {
+    if (instr.prefix) {
+        const offset: i32 = @as(i11, @bitCast(instr.offset));
+
+        var lr: i32 = undefined;
+
+        lr = @as(i32, @bitCast(registers.get(15))) +% (offset << 12);
+
+        registers.set(14, @bitCast(lr));
+    } else {
+        const offset = @as(i32, @bitCast(registers.get(14))) +% @as(i32, @as(u12, instr.offset) << 1);
+
+        const old_pc = registers.get(15);
+        var new_pc: i32 = undefined;
+
+        new_pc = @as(i32, @bitCast(old_pc)) +% offset;
+
+        registers.set(15, @bitCast(new_pc));
+        registers.set(14, (old_pc - 4) & 0xFFFF_FFFC); // current instruction address = R15 - 4 because PC stays 4B ahead
+    }
+
+    return !instr.prefix;
+}

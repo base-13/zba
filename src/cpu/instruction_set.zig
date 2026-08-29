@@ -316,6 +316,11 @@ pub const MultipleLSTInstr = struct {
     r_list: [8]bool,
 };
 
+pub const LongBranchWithLinkTInstr = struct {
+    prefix: bool, // true => H = 0
+    offset: u11,
+};
+
 pub const Fields = union(enum) {
     data_proc: DataProcInstr,
     branch_with_link: BranchWithLink,
@@ -357,6 +362,7 @@ pub const ThumbInstr = union(enum) {
     ls_halfword: LSHalfwordTInstr,
     ls_sign_ex: LSSignExTInstr,
     multiple_ls: MultipleLSTInstr,
+    long_branch_with_link: LongBranchWithLinkTInstr,
 };
 
 pub const Instr = union(enum) {

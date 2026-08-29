@@ -177,6 +177,7 @@ pub fn poll(io: std.Io) !bool {
                 .ls_halfword => |i| exec_thumb.execLSHalfword(i, &registers, &memory_map),
                 .ls_sign_ex => |i| exec_thumb.execLSSignEx(i, &registers, &memory_map),
                 .multiple_ls => |i| exec_thumb.execMultipleLS(i, &registers, &memory_map),
+                .long_branch_with_link => |i| exec_thumb.execLongBranchWithLink(i, &registers),
             };
         },
     }
