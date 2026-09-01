@@ -14,6 +14,16 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const raylib_dep = b.dependency("raylib_zig", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const raylib = raylib_dep.module("raylib");
+    const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
+
+    exe.root_module.linkLibrary(raylib_artifact);
+    exe.root_module.addImport("raylib", raylib);
+
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");

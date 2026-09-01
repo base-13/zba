@@ -1,6 +1,6 @@
 const std = @import("std");
 const is = @import("../instruction_set.zig");
-const getNBits = @import("../utils.zig").getNBits;
+const getNBits = @import("../cpu_utils.zig").getNBits;
 
 const log = std.log.scoped(.decoder);
 

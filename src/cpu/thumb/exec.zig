@@ -2,7 +2,7 @@ const is = @import("../instruction_set.zig");
 const exec_arm = @import("../arm/exec.zig");
 const cpu_state = @import("../cpu_state.zig");
 const memory = @import("../../memory.zig");
-const utils = @import("../utils.zig");
+const utils = @import("../cpu_utils.zig");
 
 pub fn execMoveRegister(instr: is.MoveRegisterTInstr, registers: *cpu_state.Registers) bool {
     var value: u32 = undefined;

@@ -1,8 +1,12 @@
 const std = @import("std");
 const cpu = @import("cpu/cpu.zig");
 const builtin = @import("builtin");
+const rl = @import("raylib");
 
 var recved_sigint = false;
+
+const SCR_WIDTH = 240;
+const SCR_HEIGHT = 160;
 
 fn installSigintHandler() !void {
     const Handler = struct {
@@ -59,13 +63,23 @@ pub fn main(init: std.process.Init) !void {
     var file_reader = file.reader(io, &file_buf);
     var file_reader_interface = &file_reader.interface;
 
+    rl.initWindow(SCR_WIDTH, SCR_HEIGHT, "ZBA");
+    defer rl.closeWindow();
+
+    rl.setTargetFPS(60);
+
     try installSigintHandler();
 
     const bios = try file_reader_interface.readAlloc(allocator, file_size);
     cpu.setBIOS(bios);
 
-    while (!recved_sigint) {
-        try cpu.poll(io, false);
+    while (!rl.windowShouldClose()) {
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(.white);
+
+        try cpu.poll(io, false); // currently we will just poll in same loop as raylib
     }
 
     try cpu.poll(io, true);

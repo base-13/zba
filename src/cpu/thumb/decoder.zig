@@ -1,5 +1,5 @@
 const is = @import("../instruction_set.zig");
-const getNBits = @import("../utils.zig").getNBits;
+const getNBits = @import("../cpu_utils.zig").getNBits;
 
 pub const InstrDecodeError = error{InvalidInstruction};
 

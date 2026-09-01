@@ -6,7 +6,7 @@ const decoder_thumb = @import("thumb/decoder.zig");
 const exec_arm = @import("arm/exec.zig");
 const exec_thumb = @import("thumb/exec.zig");
 const memory = @import("../memory.zig");
-const utils = @import("./utils.zig");
+const utils = @import("./cpu_utils.zig");
 
 var registers = cpu_state.Registers{};
 
