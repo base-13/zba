@@ -8,6 +8,8 @@ const exec_thumb = @import("thumb/exec.zig");
 const memory = @import("../memory.zig");
 const utils = @import("./cpu_utils.zig");
 
+const IORegisters = @import("../io.zig").IORegisters;
+
 var registers = cpu_state.Registers{};
 
 fn getInstr(pc: u32) is.InstrDecodeError!is.Instr {
@@ -49,6 +51,22 @@ fn softwareInterrupt() bool {
     registers.cpsr.irq_disable = true;
 
     return true;
+}
+
+fn pollInterruptRequest() void {
+    if (registers.cpsr.irq_disable) return;
+
+    const ie_value = memory_map.read(IORegisters.IE, .HalfWord);
+    const if_value = memory_map.read(IORegisters.IF, .HalfWord);
+
+    if (ie_value & if_value > 0) {
+        registers.irq.spsr = registers.cpsr;
+        registers.cpsr.mode = .IRQ;
+        registers.cpsr.thumb_state = false;
+
+        registers.set(14, registers.getPC() + 4); // Save interrupted instruction addr + 4 to LR_irq
+        registers.setPC(is.ExceptionVectors.IRQ);
+    }
 }
 
 pub fn poll(io: std.Io, exit: bool) void {
@@ -97,6 +115,8 @@ pub fn poll(io: std.Io, exit: bool) void {
 
         return;
     }
+
+    pollInterruptRequest();
 
     const instr = getInstr(pc) catch {
         registers.setPC(is.ExceptionVectors.UndefinedInstr);
