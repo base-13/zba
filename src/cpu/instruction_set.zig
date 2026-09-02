@@ -1,3 +1,13 @@
+pub const ExceptionVectors = struct {
+    pub const Reset: u32 = 0x0;
+    pub const UndefinedInstr: u32 = 0x4;
+    pub const SoftwareInterrupt: u32 = 0x8;
+    pub const PrefetchAbort: u32 = 0xC;
+    pub const DataAbort: u32 = 0x10;
+    pub const IRQ: u32 = 0x18;
+    pub const FIQ: u32 = 0x1C;
+};
+
 pub const Condition = enum(u4) {
     EQ = 0b0000,
     NE = 0b0001,

@@ -35,7 +35,7 @@ pub fn getMemoryMap() *memory.MemoryMap {
 
 fn softwareInterrupt() bool {
     const pc = registers.getPC();
-    registers.setPC(8); // SWI Exception vector
+    registers.setPC(is.ExceptionVectors.SoftwareInterrupt);
 
     registers.svc.spsr = registers.cpsr;
     registers.cpsr.mode = .Supervisor;
@@ -99,7 +99,7 @@ pub fn poll(io: std.Io, exit: bool) void {
     }
 
     const instr = getInstr(pc) catch {
-        registers.setPC(4); // UND Exception vector
+        registers.setPC(is.ExceptionVectors.UndefinedInstr);
 
         registers.und.spsr = registers.cpsr;
         registers.cpsr.mode = .Undefined;
