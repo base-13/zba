@@ -55,7 +55,7 @@ pub const MemoryMap = struct {
         switch (addr) {
             0x02000000...0x0203FFFF => writel(&self.i_wram, addr - 0x02000000, value, length),
             0x03000000...0x03007FFF => writel(&self.e_wram, addr - 0x03000000, value, length),
-            0x04000000...0x040003FE => io.writeIOR(&self.io_registers, addr - 0x04000000, value, length),
+            0x04000000...0x040003FE => io.writeIOR(&self.io_registers, addr, value, length, false),
             0x05000000...0x050001FF => writel(&self.bg_palette, addr - 0x05000000, value, length),
             0x05000200...0x050003FF => writel(&self.obj_palette, addr - 0x05000200, value, length),
             0x06000000...0x06017FFF => writel(&self.vram, addr - 0x06000000, value, length),
@@ -70,7 +70,7 @@ pub const MemoryMap = struct {
             0x00000000...0x00003FFF => break :reader_blk readl(&self.bios, addr, length),
             0x02000000...0x0203FFFF => break :reader_blk readl(&self.i_wram, addr - 0x02000000, length),
             0x03000000...0x03007FFF => break :reader_blk readl(&self.e_wram, addr - 0x03000000, length),
-            0x04000000...0x040003FE => break :reader_blk io.readIOR(&self.io_registers, addr - 0x04000000, length),
+            0x04000000...0x040003FE => break :reader_blk io.readIOR(&self.io_registers, addr, length, false),
             0x05000000...0x050001FF => break :reader_blk readl(&self.bg_palette, addr - 0x05000000, length),
             0x05000200...0x050003FF => break :reader_blk readl(&self.obj_palette, addr - 0x05000200, length),
             0x06000000...0x06017FFF => break :reader_blk readl(&self.vram, addr - 0x06000000, length),

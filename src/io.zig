@@ -67,77 +67,45 @@ fn isReadable(addr: u32) bool {
     };
 }
 
-// these are meant to be used by memory unit and CPU
+/// Writes `value` to given address(starting from 0x4000000).
+///
+/// if `force` is `true` it ignores if register is writeable or not
+/// **Note:** This function doesn't check bounds on value it is writing
+pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: Length, force: bool) void {
+    const rel_addr = addr - 0x4000000;
 
-/// Writes `value` to IORs at addr starting from 0, doesn't do anything if register is invalid or read-only
-pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: Length) void {
     var buf: [@intFromEnum(length)]u8 = @splat(0);
 
     std.mem.writeInt(LengthType(length), &buf, @truncate(value), .little);
 
     for (buf, 0..) |byte, i| {
-        const byte_addr = addr + @as(u32, @intCast(i));
+        const byte_addr = rel_addr + @as(u32, @intCast(i));
 
-        if (isWriteable(byte_addr))
+        if (isWriteable(byte_addr) or force)
             ior[byte_addr] = byte
         else
             log.warn("Attempted write to invalid IOR at {X}", .{byte_addr});
     }
 }
 
-/// Reads value of IORs at addr starting from 0, reads 0 if register is invalid or write-only
-pub fn readIOR(ior: *IORegistersType, addr: u32, comptime length: Length) LengthType(length) {
+/// Reads the register at given address(starting from 0x4000000), invalid or write-only registers read 0.
+///
+/// if `force` is `true` it ignores if register is writeable or not
+/// **Note:** This function doesn't check bounds on value it is reading
+pub fn readIOR(ior: *IORegistersType, addr: u32, comptime length: Length, force: bool) LengthType(length) {
+    const rel_addr = addr - 0x4000000;
+
     const read_size = @intFromEnum(length);
 
     var buf: [read_size]u8 = @splat(0);
 
     for (0..read_size) |i| {
-        const byte_addr = addr + @as(u32, @intCast(i));
+        const byte_addr = rel_addr + @as(u32, @intCast(i));
 
-        if (isReadable(byte_addr))
+        if (isReadable(byte_addr) or force)
             buf[i] = ior[byte_addr]
         else
             log.warn("Attempted read to invalid IOR at {X}", .{byte_addr});
-    }
-
-    return std.mem.readInt(LengthType(length), &buf, .little);
-}
-
-// these are meant to be used by other units such as PPU, Audio unit etc
-
-/// Writes `value` to given address(starting from 0x4000000), it is not meant for use by MMU
-///
-/// **Note:** This function ignores if register is writeable or not
-/// **Note:** This function doesn't check bounds on value it is writing
-pub fn setIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: Length) LengthType(length) {
-    const rel_addr = addr - 0x4000000;
-
-    var buf: [@intFromEnum(length)]u8 = @splat(0);
-
-    std.mem.writeInt(LengthType(length), &buf, @truncate(value), .little);
-
-    for (buf, 0..) |byte, i| {
-        const byte_addr = rel_addr + @as(u32, @intCast(i));
-
-        ior[byte_addr] = byte;
-    }
-}
-
-/// Reads the register at given address(starting from 0x4000000), it is not meant for use by MMU
-///
-/// **Note:** This function ignores if register is readable or not
-/// **Note:** This function doesn't check bounds on value it is reading
-pub fn getIOR(ior: *IORegistersType, addr: u32, comptime length: Length) LengthType(length) {
-    const rel_addr = addr - 0x4000000;
-
-    const read_size = @intFromEnum(length);
-
-    var buf: [read_size]u8 = @splat(0);
-
-    for (0..read_size) |i| {
-        const byte_addr = rel_addr + @as(u32, @intCast(i));
-
-        buf[i] = ior[byte_addr];
     }
 
     return std.mem.readInt(LengthType(length), &buf, .little);
