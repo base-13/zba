@@ -29,6 +29,10 @@ pub fn setBIOS(bios: []u8) void {
     std.mem.copyForwards(u8, memory_map.bios[0..bios.len], bios);
 }
 
+pub fn getMemoryMap() *memory.MemoryMap {
+    return memory_map;
+}
+
 fn softwareInterrupt() bool {
     const pc = registers.getPC();
     registers.setPC(8); // SWI Exception vector
@@ -47,7 +51,7 @@ fn softwareInterrupt() bool {
     return true;
 }
 
-pub fn poll(io: std.Io, exit: bool) !void {
+pub fn poll(io: std.Io, exit: bool) void {
     const pc = registers.getPC();
 
     if (exit) {
@@ -65,13 +69,31 @@ pub fn poll(io: std.Io, exit: bool) !void {
             registers.und,
         });
 
-        const i_wram_file = try std.Io.Dir.cwd().createFile(io, "i_wram.bin", .{});
-        const e_wram_file = try std.Io.Dir.cwd().createFile(io, "e_wram.bin", .{});
-        defer i_wram_file.close(io);
-        defer e_wram_file.close(io);
+        var i_wram_file: ?std.Io.File = undefined;
+        i_wram_file = std.Io.Dir.cwd().createFile(io, "i_wram.bin", .{}) catch |e| blk: {
+            std.debug.print("Failed to create i_wram.bin {}", .{e});
+            break :blk null;
+        };
 
-        try i_wram_file.writeStreamingAll(io, &memory_map.i_wram);
-        try e_wram_file.writeStreamingAll(io, &memory_map.e_wram);
+        if (i_wram_file != null) {
+            defer i_wram_file.?.close(io);
+            i_wram_file.?.writeStreamingAll(io, &memory_map.i_wram) catch |e| {
+                std.debug.print("Failed to write i_wram.bin {}", .{e});
+            };
+        }
+
+        var e_wram_file: ?std.Io.File = undefined;
+        e_wram_file = std.Io.Dir.cwd().createFile(io, "e_wram.bin", .{}) catch |e| blk: {
+            std.debug.print("Failed to create e_wram.bin {}", .{e});
+            break :blk null;
+        };
+
+        if (e_wram_file != null) {
+            defer e_wram_file.?.close(io);
+            e_wram_file.?.writeStreamingAll(io, &memory_map.e_wram) catch |e| {
+                std.debug.print("Failed to write e_wram.bin {}", .{e});
+            };
+        }
 
         return;
     }

@@ -8,6 +8,8 @@ var recved_sigint = false;
 const SCR_WIDTH = 240;
 const SCR_HEIGHT = 160;
 
+var stop_cpu_polling = std.atomic.Value(bool).init(false);
+
 fn installSigintHandler() !void {
     const Handler = struct {
         fn handler(_: c_int) callconv(.c) void {
@@ -33,6 +35,13 @@ fn installSigintHandler() !void {
 
         try std.posix.sigaction(std.posix.SIG.INT, &action, null);
     }
+}
+
+pub fn cpuPollWorker(io: std.Io) void {
+    while (!stop_cpu_polling.load(.acquire))
+        cpu.poll(io, false);
+
+    cpu.poll(io, true);
 }
 
 pub fn main(init: std.process.Init) !void {
@@ -68,19 +77,22 @@ pub fn main(init: std.process.Init) !void {
 
     rl.setTargetFPS(60);
 
-    try installSigintHandler();
+    // try installSigintHandler();
 
     const bios = try file_reader_interface.readAlloc(allocator, file_size);
     cpu.setBIOS(bios);
+
+    const cpu_polling_thread = try std.Thread.spawn(.{}, cpuPollWorker, .{io});
 
     while (!rl.windowShouldClose()) {
         rl.beginDrawing();
         defer rl.endDrawing();
 
         rl.clearBackground(.white);
-
-        try cpu.poll(io, false); // currently we will just poll in same loop as raylib
     }
 
-    try cpu.poll(io, true);
+    stop_cpu_polling.store(true, .release);
+
+    std.debug.print("waiting for cpu thread to stop...", .{});
+    cpu_polling_thread.join();
 }
