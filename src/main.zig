@@ -2,6 +2,7 @@ const std = @import("std");
 const cpu = @import("cpu/cpu.zig");
 const builtin = @import("builtin");
 const rl = @import("raylib");
+const ppu = @import("./ppu.zig");
 
 var recved_sigint = false;
 
@@ -46,6 +47,7 @@ pub fn cpuPollWorker(io: std.Io) void {
 
 pub fn main(init: std.process.Init) !void {
     const io = init.io;
+    const allocator = init.arena.allocator();
 
     var stdout_buf: [1024]u8 = undefined;
     var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buf);
@@ -55,44 +57,79 @@ pub fn main(init: std.process.Init) !void {
     var stdin_reader = std.Io.File.stdin().reader(io, &stdin_buf);
     var stdin_reader_interface = &stdin_reader.interface;
 
-    try stdout_writer_interface.print("binary path: ", .{});
+    // Read BIOS file
+    try stdout_writer_interface.print("BIOS path: ", .{});
     try stdout_writer_interface.flush();
-    const bytes_read = try stdin_reader_interface.takeDelimiter('\n') orelse unreachable;
-    const file_path = std.mem.trim(u8, bytes_read, "\r");
 
-    const file = try std.Io.Dir.cwd().openFile(io, file_path, .{});
-    defer file.close(io);
+    const bios_path_bytes_read = try stdin_reader_interface.takeDelimiter('\n') orelse unreachable;
 
-    const file_stats = try file.stat(io);
-    const file_size = file_stats.size;
+    const bios_file_path = std.mem.trim(u8, bios_path_bytes_read, "\r");
 
-    const allocator = init.arena.allocator();
+    const bios_file = try std.Io.Dir.cwd().openFile(io, bios_file_path, .{});
+    defer bios_file.close(io);
 
-    var file_buf: [1024]u8 = undefined;
-    var file_reader = file.reader(io, &file_buf);
-    var file_reader_interface = &file_reader.interface;
+    const bios_file_stats = try bios_file.stat(io);
+    const bios_file_size = bios_file_stats.size;
+
+    var bios_file_buf: [1024]u8 = undefined;
+    var bios_file_reader = bios_file.reader(io, &bios_file_buf);
+    var bios_file_reader_interface = &bios_file_reader.interface;
+
+    const bios = try bios_file_reader_interface.readAlloc(allocator, bios_file_size);
+
+    // Read ROM file
+    try stdout_writer_interface.print("ROM path: ", .{});
+    try stdout_writer_interface.flush();
+
+    const rom_path_bytes_read = try stdin_reader_interface.takeDelimiter('\n') orelse unreachable;
+
+    const rom_file_path = std.mem.trim(u8, rom_path_bytes_read, "\r");
+
+    const rom_file = try std.Io.Dir.cwd().openFile(io, rom_file_path, .{});
+    defer rom_file.close(io);
+
+    const rom_file_stats = try rom_file.stat(io);
+    const rom_file_size = rom_file_stats.size;
+
+    var rom_file_buf: [1024]u8 = undefined;
+    var rom_file_reader = rom_file.reader(io, &rom_file_buf);
+    var rom_file_reader_interface = &rom_file_reader.interface;
+
+    const rom = try rom_file_reader_interface.readAlloc(allocator, rom_file_size);
+
+    // Intialize
+    cpu.setBIOS(bios);
+    cpu.setROM(rom);
 
     rl.initWindow(SCR_WIDTH, SCR_HEIGHT, "ZBA");
     defer rl.closeWindow();
 
     rl.setTargetFPS(60);
 
-    // try installSigintHandler();
-
-    const bios = try file_reader_interface.readAlloc(allocator, file_size);
-    cpu.setBIOS(bios);
-
     const cpu_polling_thread = try std.Thread.spawn(.{}, cpuPollWorker, .{io});
 
+    var v_count: u8 = 0;
+
     while (!rl.windowShouldClose()) {
+        if (v_count == 159) ppu.setVBlank(true);
+        if (v_count == 0) ppu.setVBlank(false);
+
         rl.beginDrawing();
         defer rl.endDrawing();
 
-        rl.clearBackground(.white);
+        ppu.drawFrame();
+
+        if (v_count < 227) {
+            v_count += 1;
+        } else {
+            v_count = 0;
+        }
+
+        ppu.updateVCount(v_count);
     }
 
-    stop_cpu_polling.store(true, .release);
+    std.debug.print("waiting for cpu thread to stop...\n", .{});
 
-    std.debug.print("waiting for cpu thread to stop...", .{});
+    stop_cpu_polling.store(true, .release);
     cpu_polling_thread.join();
 }

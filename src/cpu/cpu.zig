@@ -31,8 +31,17 @@ pub fn setBIOS(bios: []u8) void {
     std.mem.copyForwards(u8, memory_map.bios[0..bios.len], bios);
 }
 
+pub fn setROM(rom: []u8) void {
+    if (rom.len > 32 * 1024 * 1024) {
+        std.debug.print("ROM too big", .{});
+        std.process.exit(1);
+    }
+
+    std.mem.copyForwards(u8, memory_map.rom[0..rom.len], rom);
+}
+
 pub fn getMemoryMap() *memory.MemoryMap {
-    return memory_map;
+    return &memory_map;
 }
 
 fn softwareInterrupt() bool {

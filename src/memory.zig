@@ -61,7 +61,7 @@ pub const MemoryMap = struct {
             0x06000000...0x06017FFF => writel(&self.vram, addr - 0x06000000, value, length),
             0x07000000...0x070003FF => writel(&self.oam, addr - 0x07000000, value, length),
             0x0E000000...0x0E00FFFF => writel(&self.sram, addr - 0x0E000000, value, length),
-            else => log.err("Attempted to write illegal memory address {x}", .{addr}),
+            else => log.err("Attempted to write illegal memory address {X}", .{addr}),
         }
     }
 
@@ -82,9 +82,17 @@ pub const MemoryMap = struct {
             },
             0x0E000000...0x0E00FFFF => break :reader_blk readl(&self.sram, addr - 0x0E000000, length),
             else => {
-                log.err("Attempted to read illegal memory address {x}", .{addr});
+                log.err("Attempted to read illegal memory address {X}", .{addr});
                 break :reader_blk 0;
             },
         };
+    }
+
+    pub fn hWriteIOR(self: *MemoryMap, addr: u32, value: u32, comptime length: Length) void {
+        io.writeIOR(&self.io_registers, addr, value, length, true);
+    }
+
+    pub fn hReadIOR(self: *MemoryMap, addr: u32, comptime length: Length) LengthType(length) {
+        return io.readIOR(&self.io_registers, addr, length, true);
     }
 };

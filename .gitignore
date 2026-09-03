@@ -1,4 +1,5 @@
 *.bin
+*.gba
 .zig-cache
 zig-out
 zig-pkg

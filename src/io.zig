@@ -67,12 +67,14 @@ fn isReadable(addr: u32) bool {
     };
 }
 
+const IOR_STARTING_ADDR = 0x4000000;
+
 /// Writes `value` to given address(starting from 0x4000000).
 ///
 /// if `force` is `true` it ignores if register is writeable or not
 /// **Note:** This function doesn't check bounds on value it is writing
 pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: Length, force: bool) void {
-    const rel_addr = addr - 0x4000000;
+    const rel_addr = addr - IOR_STARTING_ADDR;
 
     var buf: [@intFromEnum(length)]u8 = @splat(0);
 
@@ -84,7 +86,7 @@ pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: L
         if (isWriteable(byte_addr) or force)
             ior[byte_addr] = byte
         else
-            log.warn("Attempted write to invalid IOR at {X}", .{byte_addr});
+            log.warn("Attempted write to invalid IOR at {X}", .{IOR_STARTING_ADDR + byte_addr});
     }
 }
 
@@ -93,7 +95,7 @@ pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: L
 /// if `force` is `true` it ignores if register is writeable or not
 /// **Note:** This function doesn't check bounds on value it is reading
 pub fn readIOR(ior: *IORegistersType, addr: u32, comptime length: Length, force: bool) LengthType(length) {
-    const rel_addr = addr - 0x4000000;
+    const rel_addr = addr - IOR_STARTING_ADDR;
 
     const read_size = @intFromEnum(length);
 
@@ -105,7 +107,7 @@ pub fn readIOR(ior: *IORegistersType, addr: u32, comptime length: Length, force:
         if (isReadable(byte_addr) or force)
             buf[i] = ior[byte_addr]
         else
-            log.warn("Attempted read to invalid IOR at {X}", .{byte_addr});
+            log.warn("Attempted read to invalid IOR at {X}", .{IOR_STARTING_ADDR + byte_addr});
     }
 
     return std.mem.readInt(LengthType(length), &buf, .little);
