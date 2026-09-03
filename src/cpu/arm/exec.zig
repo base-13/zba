@@ -585,7 +585,7 @@ pub fn execBlockDataTransfer(
         if (instr.pre_index)
             address = rn_content -% (4 * n)
         else
-            address = rn_content -% (4 * (n -% 1));
+            address = rn_content -% (4 * @as(u32, n -% 1));
     }
 
     if (instr.force_user and current_mode == .User)
