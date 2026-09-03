@@ -83,7 +83,6 @@ pub fn writeIOR(ior: *IORegistersType, addr: u32, value: u32, comptime length: L
     for (buf, 0..) |byte, i| {
         const byte_addr = rel_addr + @as(u32, @intCast(i));
 
-        std.debug.print("{} {} {} {}", .{ isWriteable(byte_addr), byte_addr, rel_addr, addr });
         if (isWriteable(byte_addr) or force)
             ior[byte_addr] = byte
         else
