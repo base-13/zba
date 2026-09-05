@@ -23,7 +23,7 @@ fn getInstr(pc: u32) is.InstrDecodeError!is.Instr {
 var memory_map: memory.MemoryMap = .{};
 
 pub fn setBIOS(bios: []u8) void {
-    if (bios.len > 16 * 1024) {
+    if (bios.len > memory.BIOS_SIZE) {
         std.debug.print("BIOS too big", .{});
         std.process.exit(1);
     }
@@ -32,7 +32,7 @@ pub fn setBIOS(bios: []u8) void {
 }
 
 pub fn setROM(rom: []u8) void {
-    if (rom.len > 32 * 1024 * 1024) {
+    if (rom.len > memory.ROM_SIZE) {
         std.debug.print("ROM too big", .{});
         std.process.exit(1);
     }
@@ -82,7 +82,7 @@ pub fn poll(io: std.Io, exit: bool) void {
     const pc = registers.getPC();
 
     if (exit) {
-        std.debug.print("\n\nPC: {} GPRs: ", .{registers.getPC()});
+        std.debug.print("\n\nPC: {}({X}) GPRs: ", .{ pc, pc });
         for (0..16) |i|
             std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
 
@@ -119,6 +119,32 @@ pub fn poll(io: std.Io, exit: bool) void {
             defer e_wram_file.?.close(io);
             e_wram_file.?.writeStreamingAll(io, &memory_map.e_wram) catch |e| {
                 std.debug.print("Failed to write e_wram.bin {}", .{e});
+            };
+        }
+
+        var vram_file: ?std.Io.File = undefined;
+        vram_file = std.Io.Dir.cwd().createFile(io, "vram.bin", .{}) catch |e| blk: {
+            std.debug.print("Failed to create vram.bin {}", .{e});
+            break :blk null;
+        };
+
+        if (vram_file != null) {
+            defer vram_file.?.close(io);
+            vram_file.?.writeStreamingAll(io, &memory_map.vram) catch |e| {
+                std.debug.print("Failed to write vram.bin {}", .{e});
+            };
+        }
+
+        var io_registers_file: ?std.Io.File = undefined;
+        io_registers_file = std.Io.Dir.cwd().createFile(io, "io_registers.bin", .{}) catch |e| blk: {
+            std.debug.print("Failed to create io_registers.bin {}", .{e});
+            break :blk null;
+        };
+
+        if (io_registers_file != null) {
+            defer io_registers_file.?.close(io);
+            io_registers_file.?.writeStreamingAll(io, &memory_map.io_registers) catch |e| {
+                std.debug.print("Failed to write io_registers.bin {}", .{e});
             };
         }
 

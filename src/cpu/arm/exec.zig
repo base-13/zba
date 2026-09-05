@@ -314,13 +314,10 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
 }
 
 pub fn execBranchWithLink(instr: is.BranchWithLink, registers: *cpu_state.Registers) bool {
-    const current_pc = registers.get(15);
-
-    const bit_mask: u32 = ~@as(u32, 0b11);
     if (instr.link)
-        registers.set(14, current_pc & bit_mask);
+        registers.set(14, (registers.getPC() + 4) & 0xFFFF_FFFC);
 
-    const new_pc = @as(i32, @bitCast(current_pc)) + (@as(i26, instr.offset) << 2);
+    const new_pc = @as(i32, @bitCast(registers.get(15))) + (@as(i26, instr.offset) << 2);
     registers.setPC(@bitCast(new_pc));
 
     return true;
@@ -564,7 +561,7 @@ pub fn execBlockDataTransfer(
     registers: *cpu_state.Registers,
     memory_map: *memory.MemoryMap,
 ) bool {
-    var n: u4 = 0;
+    var n: u32 = 0;
 
     for (instr.r_list) |r_enabled| {
         if (r_enabled) n += 1;
@@ -585,7 +582,7 @@ pub fn execBlockDataTransfer(
         if (instr.pre_index)
             address = rn_content -% (4 * n)
         else
-            address = rn_content -% (4 * @as(u32, n -% 1));
+            address = rn_content -% (4 * n -% 1);
     }
 
     if (instr.force_user and current_mode == .User)

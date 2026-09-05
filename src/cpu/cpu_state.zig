@@ -60,12 +60,26 @@ pub const Registers = struct {
         set_control_fields: bool,
         set_cond_fields: bool,
     ) void {
+        var current_psr: ProgramStatusReg = undefined;
+
+        if (cpsr)
+            current_psr = self.cpsr
+        else
+            current_psr = switch (self.cpsr.mode) {
+                .FIQ => self.fiq.spsr,
+                .IRQ => self.irq.spsr,
+                .Supervisor => self.svc.spsr,
+                .Abort => self.abt.spsr,
+                .Undefined => self.und.spsr,
+                .User, .System => unreachable,
+            };
+
         const current_mode = self.cpsr.mode;
 
-        var n = self.cpsr.neg_flag;
-        var z = self.cpsr.zero_flag;
-        var c = self.cpsr.carry_flag;
-        var v = self.cpsr.overflow_flag;
+        var n = current_psr.neg_flag;
+        var z = current_psr.zero_flag;
+        var c = current_psr.carry_flag;
+        var v = current_psr.overflow_flag;
 
         if (set_cond_fields) {
             n = (value >> 31) & 1 == 1;
@@ -74,50 +88,16 @@ pub const Registers = struct {
             v = (value >> 28) & 1 == 1;
         }
 
-        var i = self.cpsr.irq_disable;
-        var f = self.cpsr.fiq_disable;
-        var t = self.cpsr.thumb_state;
-        var new_mode = self.cpsr.mode;
+        var i = current_psr.irq_disable;
+        var f = current_psr.fiq_disable;
+        var t = current_psr.thumb_state;
+        var new_mode = current_psr.mode;
 
-        if (current_mode != .User and current_mode != .System and set_control_fields) {
+        if (current_mode != .User and set_control_fields) {
             i = (value >> 7) & 1 == 1;
             f = (value >> 6) & 1 == 1;
             t = (value >> 5) & 1 == 1;
-            new_mode = std.enums.fromInt(CPUMode, value & 0b11111) orelse self.cpsr.mode;
-        }
-
-        if (new_mode != self.cpsr.mode) {
-            switch (new_mode) {
-                .User, .System => {},
-                .FIQ => {
-                    for (8..15) |r| {
-                        const reg: u4 = @intCast(r);
-                        self.fiq.r8_14[reg - 8] = self.get(reg);
-                    }
-
-                    self.fiq.spsr = self.cpsr;
-                },
-                .Supervisor => {
-                    self.svc.r13_14 = .{ self.get(13), self.get(14) };
-
-                    self.svc.spsr = self.cpsr;
-                },
-                .IRQ => {
-                    self.irq.r13_14 = .{ self.get(13), self.get(14) };
-
-                    self.irq.spsr = self.cpsr;
-                },
-                .Abort => {
-                    self.abt.r13_14 = .{ self.get(13), self.get(14) };
-
-                    self.abt.spsr = self.cpsr;
-                },
-                .Undefined => {
-                    self.und.r13_14 = .{ self.get(13), self.get(14) };
-
-                    self.und.spsr = self.cpsr;
-                },
-            }
+            new_mode = std.enums.fromInt(CPUMode, value & 0b11111) orelse new_mode;
         }
 
         const psr: ProgramStatusReg = .{

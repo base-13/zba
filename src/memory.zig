@@ -8,54 +8,73 @@ const LengthType = len_types.LengthType;
 const log = std.log.scoped(.memory);
 
 fn writel(region: []u8, addr: u32, value: u32, comptime length: Length) void {
-    // switch (length) {
-    //     .Byte => std.mem.writeInt(u8, region[addr..][0..1], @truncate(value), .little),
-    //     .HalfWord => std.mem.writeInt(u16, region[addr..][0..2], @truncate(value), .little),
-    //     .Word => std.mem.writeInt(u32, region[addr..][0..4], value, .little),
-    // }
-    std.mem.writeInt(
-        LengthType(length),
-        region[addr..][0..@intFromEnum(length)],
-        @truncate(value),
-        .little,
-    );
+    const T = LengthType(length);
+    const start: usize = @intCast(addr);
+    const size: usize = @intFromEnum(length);
+
+    if (start >= region.len)
+        return;
+
+    const write_len = @min(size, region.len - start);
+
+    const v: T = @truncate(value);
+
+    for (0..write_len) |i| {
+        region[start + i] = @truncate(v >> @intCast(i * 8));
+    }
 }
 
 fn readl(region: []u8, addr: u32, comptime length: Length) LengthType(length) {
-    // return switch (length) {
-    //     .Byte => std.mem.readInt(u8, region[addr..][0..1], .little),
-    //     .HalfWord => std.mem.readInt(u16, region[addr..][0..2], .little),
-    //     .Word => std.mem.readInt(u32, region[addr..][0..4], .little),
-    // };
-    return std.mem.readInt(
-        LengthType(length),
-        region[addr..][0..@intFromEnum(length)],
-        .little,
-    );
+    const T = LengthType(length);
+    const start: usize = @intCast(addr);
+    const size: usize = @intFromEnum(length);
+
+    var read: T = 0;
+
+    if (start >= region.len)
+        return read;
+
+    const read_len = @min(size, region.len - start);
+
+    for (0..read_len) |i| {
+        read |= @as(T, region[start + i]) << @intCast(i * 8);
+    }
+
+    return read;
 }
 
+pub const BIOS_SIZE = 16 * 1024; // 16 KiB
+pub const I_WRAM_SIZE = 32 * 1024; // 32 KiB
+pub const E_WRAM_SIZE = 256 * 1024; // 256 KiB
+pub const VRAM_SIZE = 96 * 1024; // 96 KiB
+pub const BG_PALETTE_SIZE = 512; // 512 B
+pub const OBJ_PALETTE_SIZE = 512; // 512 B
+pub const OAM_SIZE = 1024; // 1 KiB
+pub const ROM_SIZE = 32 * 1024 * 1024; // 32 MiB
+pub const SRAM_SIZE = 64 * 1024; // 64 KiB
+
 pub const MemoryMap = struct {
-    bios: [16 * 1024]u8 = @splat(0), // 16 KiB
+    bios: [BIOS_SIZE]u8 = @splat(0),
 
-    i_wram: [32 * 1024]u8 = @splat(0), // 32 KiB
-    e_wram: [256 * 1024]u8 = @splat(0), // 256 KiB
-    vram: [96 * 1024]u8 = @splat(0), // 96 KiB
+    i_wram: [I_WRAM_SIZE]u8 = @splat(0),
+    e_wram: [E_WRAM_SIZE]u8 = @splat(0),
+    vram: [VRAM_SIZE]u8 = @splat(0),
 
-    bg_palette: [512]u8 = @splat(0), // 512 B
-    obj_palette: [512]u8 = @splat(0), // 512 B
-    oam: [1024]u8 = @splat(0), // 1 KiB
+    bg_palette: [BG_PALETTE_SIZE]u8 = @splat(0),
+    obj_palette: [OBJ_PALETTE_SIZE]u8 = @splat(0),
+    oam: [OAM_SIZE]u8 = @splat(0),
 
-    rom: [32 * 1024 * 1024]u8 = @splat(0), // 32 MiB
+    rom: [ROM_SIZE]u8 = @splat(0),
 
-    sram: [64 * 1024]u8 = @splat(0), // 64 KiB
+    sram: [SRAM_SIZE]u8 = @splat(0),
 
     io_registers: io.IORegistersType = @splat(0),
 
     pub fn write(self: *MemoryMap, addr: u32, value: u32, comptime length: Length) void {
         switch (addr) {
-            0x02000000...0x0203FFFF => writel(&self.i_wram, addr - 0x02000000, value, length),
-            0x03000000...0x03007FFF => writel(&self.e_wram, addr - 0x03000000, value, length),
-            0x04000000...0x040003FE => io.writeIOR(&self.io_registers, addr, value, length, false),
+            0x02000000...0x02FFFFFF => writel(&self.e_wram, (addr - 0x02000000) % E_WRAM_SIZE, value, length),
+            0x03000000...0x03FFFFFF => writel(&self.i_wram, (addr - 0x03000000) % I_WRAM_SIZE, value, length),
+            0x04000000...0x04700000 => io.writeIOR(&self.io_registers, addr, value, length, false),
             0x05000000...0x050001FF => writel(&self.bg_palette, addr - 0x05000000, value, length),
             0x05000200...0x050003FF => writel(&self.obj_palette, addr - 0x05000200, value, length),
             0x06000000...0x06017FFF => writel(&self.vram, addr - 0x06000000, value, length),
@@ -68,15 +87,15 @@ pub const MemoryMap = struct {
     pub fn read(self: *MemoryMap, addr: u32, comptime length: Length) LengthType(length) {
         return reader_blk: switch (addr) {
             0x00000000...0x00003FFF => break :reader_blk readl(&self.bios, addr, length),
-            0x02000000...0x0203FFFF => break :reader_blk readl(&self.i_wram, addr - 0x02000000, length),
-            0x03000000...0x03007FFF => break :reader_blk readl(&self.e_wram, addr - 0x03000000, length),
-            0x04000000...0x040003FE => break :reader_blk io.readIOR(&self.io_registers, addr, length, false),
+            0x02000000...0x02FFFFFF => break :reader_blk readl(&self.e_wram, (addr - 0x02000000) % E_WRAM_SIZE, length),
+            0x03000000...0x03FFFFFF => break :reader_blk readl(&self.i_wram, (addr - 0x03000000) % I_WRAM_SIZE, length),
+            0x04000000...0x04700000 => break :reader_blk io.readIOR(&self.io_registers, addr, length, false),
             0x05000000...0x050001FF => break :reader_blk readl(&self.bg_palette, addr - 0x05000000, length),
             0x05000200...0x050003FF => break :reader_blk readl(&self.obj_palette, addr - 0x05000200, length),
             0x06000000...0x06017FFF => break :reader_blk readl(&self.vram, addr - 0x06000000, length),
             0x07000000...0x070003FF => break :reader_blk readl(&self.oam, addr - 0x07000000, length),
             0x08000000...0x0DFFFFFF => {
-                const rom_addr: u32 = @intCast((addr - 0x08000000) % self.rom.len);
+                const rom_addr: u32 = @intCast((addr - 0x08000000) % ROM_SIZE);
 
                 break :reader_blk readl(&self.rom, rom_addr, length);
             },
@@ -88,6 +107,7 @@ pub const MemoryMap = struct {
         };
     }
 
+    // IOR DMA
     pub fn hWriteIOR(self: *MemoryMap, addr: u32, value: u32, comptime length: Length) void {
         io.writeIOR(&self.io_registers, addr, value, length, true);
     }

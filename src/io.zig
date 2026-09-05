@@ -6,7 +6,8 @@ const LengthType = len_types.LengthType;
 
 const log = std.log.scoped(.io);
 
-pub const IORegistersType = [0x700000]u8;
+pub const IOR_SIZE = 0x700000;
+pub const IORegistersType = [IOR_SIZE]u8;
 
 fn isWriteable(addr: u32) bool {
     return switch (addr) {
@@ -30,7 +31,7 @@ fn isWriteable(addr: u32) bool {
         0x15a...0x1ff,
         0x206...0x207,
         0x20a...0x2ff,
-        0x302...0x6fffff,
+        0x302...0x700000,
         => false,
         else => true,
     };
@@ -61,7 +62,7 @@ fn isReadable(addr: u32) bool {
         0x15a...0x1ff,
         0x206...0x207,
         0x20a...0x2ff,
-        0x301...0x6fffff,
+        0x301...0x700000,
         => false,
         else => true,
     };
