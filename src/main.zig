@@ -10,6 +10,8 @@ const SCR_WIDTH = 240;
 const SCR_HEIGHT = 160;
 
 var stop_cpu_polling = std.atomic.Value(bool).init(false);
+var slow_exec = std.atomic.Value(bool).init(false);
+var pause_exec = std.atomic.Value(bool).init(true);
 
 fn installSigintHandler() !void {
     const Handler = struct {
@@ -38,9 +40,15 @@ fn installSigintHandler() !void {
     }
 }
 
-pub fn cpuPollWorker(io: std.Io) void {
-    while (!stop_cpu_polling.load(.acquire))
+pub fn cpuPollWorker(io: std.Io) !void {
+    while (!stop_cpu_polling.load(.acquire)) {
+        while (pause_exec.load(.acquire) and !stop_cpu_polling.load(.acquire)) {}
+
+        if (slow_exec.load(.acquire))
+            try io.sleep(.fromMilliseconds(500), .real);
+
         cpu.poll(io, false);
+    }
 
     cpu.poll(io, true);
 }
@@ -126,6 +134,19 @@ pub fn main(init: std.process.Init) !void {
         }
 
         ppu.updateVCount(v_count);
+
+        // debug keys
+        // S => toggle slow execution
+        // D => dump memory
+        // F => dump CPU state
+        // P => pause/continue execution
+        switch (rl.getKeyPressed()) {
+            .s => slow_exec.store(!slow_exec.load(.acquire), .release),
+            .d => cpu.dumpMemory(io),
+            .f => cpu.dumpState(),
+            .p => pause_exec.store(!pause_exec.load(.acquire), .release),
+            else => {},
+        }
     }
 
     std.debug.print("waiting for cpu thread to stop...\n", .{});

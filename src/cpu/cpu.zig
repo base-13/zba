@@ -78,75 +78,98 @@ fn pollInterruptRequest() void {
     }
 }
 
+pub fn dumpMemory(io: std.Io) void {
+    var i_wram_file: ?std.Io.File = undefined;
+    i_wram_file = std.Io.Dir.cwd().createFile(io, "i_wram.bin", .{}) catch |e| blk: {
+        std.debug.print("Failed to create i_wram.bin {}", .{e});
+        break :blk null;
+    };
+
+    if (i_wram_file != null) {
+        defer i_wram_file.?.close(io);
+        i_wram_file.?.writeStreamingAll(io, &memory_map.i_wram) catch |e| {
+            std.debug.print("Failed to write i_wram.bin {}", .{e});
+        };
+    }
+
+    var e_wram_file: ?std.Io.File = undefined;
+    e_wram_file = std.Io.Dir.cwd().createFile(io, "e_wram.bin", .{}) catch |e| blk: {
+        std.debug.print("Failed to create e_wram.bin {}", .{e});
+        break :blk null;
+    };
+
+    if (e_wram_file != null) {
+        defer e_wram_file.?.close(io);
+        e_wram_file.?.writeStreamingAll(io, &memory_map.e_wram) catch |e| {
+            std.debug.print("Failed to write e_wram.bin {}", .{e});
+        };
+    }
+
+    var vram_file: ?std.Io.File = undefined;
+    vram_file = std.Io.Dir.cwd().createFile(io, "vram.bin", .{}) catch |e| blk: {
+        std.debug.print("Failed to create vram.bin {}", .{e});
+        break :blk null;
+    };
+
+    if (vram_file != null) {
+        defer vram_file.?.close(io);
+        vram_file.?.writeStreamingAll(io, &memory_map.vram) catch |e| {
+            std.debug.print("Failed to write vram.bin {}", .{e});
+        };
+    }
+
+    var io_registers_file: ?std.Io.File = undefined;
+    io_registers_file = std.Io.Dir.cwd().createFile(io, "io_registers.bin", .{}) catch |e| blk: {
+        std.debug.print("Failed to create io_registers.bin {}", .{e});
+        break :blk null;
+    };
+
+    if (io_registers_file != null) {
+        defer io_registers_file.?.close(io);
+        io_registers_file.?.writeStreamingAll(io, &memory_map.io_registers) catch |e| {
+            std.debug.print("Failed to write io_registers.bin {}", .{e});
+        };
+    }
+
+    var bg_palette_file: ?std.Io.File = undefined;
+    bg_palette_file = std.Io.Dir.cwd().createFile(io, "bg_palette.bin", .{}) catch |e| blk: {
+        std.debug.print("Failed to create bg_palette.bin {}", .{e});
+        break :blk null;
+    };
+
+    if (bg_palette_file != null) {
+        defer bg_palette_file.?.close(io);
+        bg_palette_file.?.writeStreamingAll(io, &memory_map.bg_palette) catch |e| {
+            std.debug.print("Failed to write bg_palette.bin {}", .{e});
+        };
+    }
+}
+
+pub fn dumpState() void {
+    const pc = registers.getPC();
+
+    std.debug.print("\n\nPC: {}({X}) GPRs: ", .{ pc, pc });
+    for (0..16) |i|
+        std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
+
+    const debug_fmt = "\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
+    std.debug.print(debug_fmt, .{
+        registers.cpsr,
+        registers.fiq,
+        registers.irq,
+        registers.abt,
+        registers.svc,
+        registers.und,
+    });
+}
+
 pub fn poll(io: std.Io, exit: bool) void {
     const pc = registers.getPC();
 
     if (exit) {
-        std.debug.print("\n\nPC: {}({X}) GPRs: ", .{ pc, pc });
-        for (0..16) |i|
-            std.debug.print("r{}=0x{X} ", .{ i, registers.get(@intCast(i)) });
+        dumpState();
 
-        const debug_fmt = "\nCPSR: {}\nFIQ: {}\nIRQ: {}\nABT: {}\nSVC: {}\nUND: {}\n\n";
-        std.debug.print(debug_fmt, .{
-            registers.cpsr,
-            registers.fiq,
-            registers.irq,
-            registers.abt,
-            registers.svc,
-            registers.und,
-        });
-
-        var i_wram_file: ?std.Io.File = undefined;
-        i_wram_file = std.Io.Dir.cwd().createFile(io, "i_wram.bin", .{}) catch |e| blk: {
-            std.debug.print("Failed to create i_wram.bin {}", .{e});
-            break :blk null;
-        };
-
-        if (i_wram_file != null) {
-            defer i_wram_file.?.close(io);
-            i_wram_file.?.writeStreamingAll(io, &memory_map.i_wram) catch |e| {
-                std.debug.print("Failed to write i_wram.bin {}", .{e});
-            };
-        }
-
-        var e_wram_file: ?std.Io.File = undefined;
-        e_wram_file = std.Io.Dir.cwd().createFile(io, "e_wram.bin", .{}) catch |e| blk: {
-            std.debug.print("Failed to create e_wram.bin {}", .{e});
-            break :blk null;
-        };
-
-        if (e_wram_file != null) {
-            defer e_wram_file.?.close(io);
-            e_wram_file.?.writeStreamingAll(io, &memory_map.e_wram) catch |e| {
-                std.debug.print("Failed to write e_wram.bin {}", .{e});
-            };
-        }
-
-        var vram_file: ?std.Io.File = undefined;
-        vram_file = std.Io.Dir.cwd().createFile(io, "vram.bin", .{}) catch |e| blk: {
-            std.debug.print("Failed to create vram.bin {}", .{e});
-            break :blk null;
-        };
-
-        if (vram_file != null) {
-            defer vram_file.?.close(io);
-            vram_file.?.writeStreamingAll(io, &memory_map.vram) catch |e| {
-                std.debug.print("Failed to write vram.bin {}", .{e});
-            };
-        }
-
-        var io_registers_file: ?std.Io.File = undefined;
-        io_registers_file = std.Io.Dir.cwd().createFile(io, "io_registers.bin", .{}) catch |e| blk: {
-            std.debug.print("Failed to create io_registers.bin {}", .{e});
-            break :blk null;
-        };
-
-        if (io_registers_file != null) {
-            defer io_registers_file.?.close(io);
-            io_registers_file.?.writeStreamingAll(io, &memory_map.io_registers) catch |e| {
-                std.debug.print("Failed to write io_registers.bin {}", .{e});
-            };
-        }
+        dumpMemory(io);
 
         return;
     }
@@ -170,6 +193,7 @@ pub fn poll(io: std.Io, exit: bool) void {
         return;
     };
 
+    std.debug.print("PC: {}({X}) ", .{ pc, pc });
     switch (instr) {
         .arm => |arm_instr| switch (arm_instr.fields) {
             .data_proc => std.debug.print("{} op2={}\n", .{ arm_instr, arm_instr.fields.data_proc.op2 }),

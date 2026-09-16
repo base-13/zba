@@ -1,10 +1,8 @@
 const rl = @import("raylib");
 const cpu = @import("cpu/cpu.zig");
+const memory = @import("./memory.zig");
 
 const IORegisters = @import("io.zig").IORegisters;
-
-const BG_PALETTE: u32 = 0x05000000;
-const VRAM: u32 = 0x06000000;
 
 pub fn updateVCount(v_count: u8) void {
     cpu.getMemoryMap().hWriteIOR(IORegisters.VCOUNT, v_count, .HalfWord);
@@ -45,7 +43,7 @@ pub fn drawFrame() void {
     const dispcnt = memory_map.hReadIOR(IORegisters.DISPCNT, .Word);
     const page: u32 = (dispcnt >> 4) & 1;
 
-    const framebuf_start_addr = VRAM + (0xA000 * page);
+    const framebuf_start_addr = memory.VRAM_START + (0xA000 * page);
 
     for (0..160) |y| {
         for (0..240) |x| {
@@ -63,7 +61,8 @@ pub fn drawFrame() void {
                     .b = 0,
                 };
             } else {
-                const palette = memory_map.read(BG_PALETTE + 2 * palette_index, .HalfWord);
+                const bg_palette_index = memory.BG_PALETTE_START + 2 * @as(u32, palette_index);
+                const palette = memory_map.read(bg_palette_index, .HalfWord);
 
                 color = raylibColorFromRGB555(
                     @truncate(palette),
