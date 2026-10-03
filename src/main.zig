@@ -12,6 +12,8 @@ const SCR_HEIGHT = 160;
 var stop_cpu_polling = std.atomic.Value(bool).init(false);
 var slow_exec = std.atomic.Value(bool).init(false);
 var pause_exec = std.atomic.Value(bool).init(true);
+var fast_steps: u32 = 0;
+var steps: u32 = 0;
 
 fn installSigintHandler() !void {
     const Handler = struct {
@@ -46,6 +48,9 @@ pub fn cpuPollWorker(io: std.Io) !void {
 
         if (slow_exec.load(.acquire))
             try io.sleep(.fromMilliseconds(500), .real);
+
+        steps += 1;
+        if (steps == fast_steps) slow_exec.store(true, .release);
 
         cpu.poll(io, false);
     }
@@ -104,6 +109,13 @@ pub fn main(init: std.process.Init) !void {
     var rom_file_reader_interface = &rom_file_reader.interface;
 
     const rom = try rom_file_reader_interface.readAlloc(allocator, rom_file_size);
+
+    try stdout_writer_interface.print("Fast steps(automatically slows down after executing this many instructions): ", .{});
+    try stdout_writer_interface.flush();
+
+    const fast_steps_bytes_read = try stdin_reader_interface.takeDelimiter('\n') orelse unreachable;
+
+    fast_steps = try std.fmt.parseInt(u32, std.mem.trim(u8, fast_steps_bytes_read, "\r"), 10);
 
     // Intialize
     cpu.setBIOS(bios);
