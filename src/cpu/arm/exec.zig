@@ -212,13 +212,12 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
         .RSC => {
             const carry_in: u32 = @intFromBool(cpsr.carry_flag);
 
-            const sum1 = @subWithOverflow(op2, rn_content);
-            const result = @subWithOverflow(sum1[0], carry_in);
-            registers.set(rd, result[0]);
+            const result = op2 -% rn_content -% (1 - carry_in);
+            registers.set(rd, result);
 
-            negative = result[0] >> 31 == 1;
-            alu_carry = result[1] == 0 or sum1[1] == 0;
-            zero = result[0] == 0;
+            negative = result >> 31 == 1;
+            alu_carry = if (carry_in == 0) op2 > rn_content else op2 >= rn_content;
+            zero = result == 0;
 
             const rn_content_signed: i32 = @bitCast(rn_content);
             const op2_signed: i32 = @bitCast(op2);
