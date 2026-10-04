@@ -132,12 +132,12 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
             zero = result == 0;
         },
         .SUB => {
-            const result = @subWithOverflow(rn_content, op2);
-            registers.set(rd, result[0]);
+            const result = rn_content -% op2;
+            registers.set(rd, result);
 
-            negative = result[0] >> 31 == 1;
-            alu_carry = result[1] == 0;
-            zero = result[0] == 0;
+            negative = result >> 31 == 1;
+            alu_carry = rn_content >= op2;
+            zero = result == 0;
 
             const rn_content_signed: i32 = @bitCast(rn_content);
             const op2_signed: i32 = @bitCast(op2);
@@ -193,13 +193,12 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
         .SBC => {
             const carry_in: u32 = @intFromBool(cpsr.carry_flag);
 
-            const sum1 = @subWithOverflow(rn_content, op2);
-            const result = @subWithOverflow(sum1[0], carry_in);
-            registers.set(rd, result[0]);
+            const result = rn_content -% op2 -% (1 - carry_in);
+            registers.set(rd, result);
 
-            negative = result[0] >> 31 == 1;
-            alu_carry = result[1] == 0 or sum1[1] == 0;
-            zero = result[0] == 0;
+            negative = result >> 31 == 1;
+            alu_carry = if (carry_in == 0) rn_content > op2 else rn_content >= op2;
+            zero = result == 0;
 
             const rn_content_signed: i32 = @bitCast(rn_content);
             const op2_signed: i32 = @bitCast(op2);
