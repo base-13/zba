@@ -205,7 +205,7 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
             const carry_in_signed: i32 = @bitCast(carry_in);
 
             const sum1_signed = @subWithOverflow(rn_content_signed, op2_signed);
-            const result_signed = @subWithOverflow(sum1_signed[0], carry_in_signed);
+            const result_signed = @subWithOverflow(sum1_signed[0], (1 - carry_in_signed));
 
             overflow = sum1_signed[1] == 1 or result_signed[1] == 1;
         },
@@ -224,7 +224,7 @@ pub fn execDataProc(instr: is.DataProcInstr, registers: *cpu_state.Registers) bo
             const carry_in_signed: i32 = @bitCast(carry_in);
 
             const sum1_signed = @subWithOverflow(op2_signed, rn_content_signed);
-            const result_signed = @subWithOverflow(sum1_signed[0], carry_in_signed);
+            const result_signed = @subWithOverflow(sum1_signed[0], (1 - carry_in_signed));
 
             overflow = sum1_signed[1] == 1 or result_signed[1] == 1;
         },
